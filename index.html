@@ -1,244 +1,1000 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Invoice Medicine Extractor</title>
-<style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice Medicine Extractor</title>
+    <style>
 :root {
---bg: #f6f1e7; --panel: rgba(255,251,245,0.88); --panel-strong: #fffaf2;
---line: rgba(74,58,32,0.14); --ink: #21180e; --muted: #6d6253;
---primary: #0f766e; --primary-deep: #0a514c; --accent: #c66f47;
---danger-bg: rgba(214,75,75,0.14); --danger-line: #d64b4b;
---warning-bg: rgba(230,185,46,0.18); --warning-line: #d39d16;
---neutral-bg: rgba(15,118,110,0.08);
---shadow: 0 18px 40px rgba(34,25,12,0.12); --radius: 24px;
+  --bg: #f6f1e7;
+  --panel: rgba(255, 251, 245, 0.88);
+  --panel-strong: #fffaf2;
+  --line: rgba(74, 58, 32, 0.14);
+  --ink: #21180e;
+  --muted: #6d6253;
+  --primary: #0f766e;
+  --primary-deep: #0a514c;
+  --accent: #c66f47;
+  --danger-bg: rgba(214, 75, 75, 0.14);
+  --danger-line: #d64b4b;
+  --warning-bg: rgba(230, 185, 46, 0.18);
+  --warning-line: #d39d16;
+  --neutral-bg: rgba(15, 118, 110, 0.08);
+  --shadow: 0 18px 40px rgba(34, 25, 12, 0.12);
+  --radius: 24px;
 }
-* { box-sizing: border-box; }
-body { margin:0; font-family:"Trebuchet MS","Aptos","Segoe UI",sans-serif; color:var(--ink); background: radial-gradient(circle at top left,rgba(198,111,71,0.18),transparent 28%), radial-gradient(circle at top right,rgba(15,118,110,0.16),transparent 32%), linear-gradient(180deg,#f9f3e7 0%,#f2eadb 100%); min-height:100vh; }
-body::before { content:""; position:fixed; inset:0; background-image: linear-gradient(rgba(62,48,24,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(62,48,24,0.03) 1px,transparent 1px); background-size:26px 26px; pointer-events:none; mask-image:linear-gradient(180deg,rgba(0,0,0,0.55),transparent 92%); }
-.page-shell { width:min(1380px,calc(100% - 32px)); margin:24px auto 40px; display:grid; gap:20px; }
-.panel { position:relative; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); backdrop-filter:blur(12px); animation:rise 450ms ease both; }
-.hero { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; overflow:hidden; }
-.hero::after { content:""; position:absolute; right:-40px; top:-50px; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle,rgba(15,118,110,0.18),transparent 65%); pointer-events:none; }
-.eyebrow,.section-kicker { margin:0 0 8px; text-transform:uppercase; letter-spacing:0.14em; font-size:0.72rem; color:var(--accent); font-weight:700; }
-h1,h2 { margin:0; font-family:Georgia,"Palatino Linotype",serif; font-weight:700; }
-h1 { font-size:clamp(2rem,4vw,3.4rem); line-height:1.02; }
-h2 { font-size:1.45rem; }
-.hero-copy { max-width:760px; margin:14px 0 0; line-height:1.65; color:var(--muted); }
-.helper-copy { margin:12px 0 0; color:var(--muted); line-height:1.55; font-size:0.95rem; }
-.hero-note,.tip-card { min-width:280px; max-width:360px; border-radius:20px; padding:18px; background:linear-gradient(135deg,rgba(15,118,110,0.14),rgba(198,111,71,0.08)); border:1px solid rgba(15,118,110,0.18); display:grid; gap:8px; line-height:1.55; }
-.workspace { display:grid; grid-template-columns:1.05fr 1fr; gap:20px; }
-.panel-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; }
-.file-button { position:relative; overflow:hidden; border-radius:999px; background:var(--primary); color:#fff; padding:12px 18px; font-weight:700; cursor:pointer; border:0; transition:transform 180ms ease,background 180ms ease; }
-.file-button:hover,.primary-button:hover,.ghost-button:hover { transform:translateY(-1px); }
-.file-button input { position:absolute; inset:0; opacity:0; cursor:pointer; }
-.preview-frame { position:relative; min-height:380px; border-radius:24px; overflow:hidden; background:linear-gradient(135deg,rgba(15,118,110,0.08),rgba(198,111,71,0.06)),var(--panel-strong); border:1px dashed rgba(15,118,110,0.28); }
-#previewCanvas { display:none; width:100%; height:auto; }
-.empty-preview { position:absolute; inset:0; display:grid; place-items:center; align-content:center; text-align:center; gap:10px; padding:28px; color:var(--muted); }
-.control-strip,.action-row,.table-actions,.legend,.stats-cluster { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
-.control-strip,.action-row { margin-top:16px; }
-.inline-field,.field,.text-block { display:grid; gap:8px; }
-.inline-field span,.field span,.text-block span { font-size:0.9rem; font-weight:700; color:var(--muted); }
-input[type="text"],input[type="number"],input[type="password"],select,textarea { width:100%; border:1px solid rgba(74,58,32,0.14); border-radius:16px; background:rgba(255,255,255,0.82); padding:12px 14px; color:var(--ink); font:inherit; transition:border-color 180ms ease,box-shadow 180ms ease; }
-textarea { min-height:320px; resize:vertical; line-height:1.55; }
-input:focus,select:focus,textarea:focus { outline:none; border-color:rgba(15,118,110,0.58); box-shadow:0 0 0 4px rgba(15,118,110,0.12); }
-.primary-button,.ghost-button { appearance:none; border-radius:999px; padding:12px 18px; font:inherit; font-weight:700; cursor:pointer; transition:transform 180ms ease,background 180ms ease; }
-.primary-button { border:0; color:#fff; background:linear-gradient(135deg,var(--primary),var(--primary-deep)); }
-.ghost-button { border:1px solid rgba(15,118,110,0.24); background:rgba(255,255,255,0.72); color:var(--ink); }
-.progress-track { width:100%; height:10px; margin-top:18px; border-radius:999px; overflow:hidden; background:rgba(15,118,110,0.08); }
-.progress-track span { display:block; height:100%; width:0%; border-radius:inherit; background:linear-gradient(90deg,var(--accent),var(--primary)); transition:width 180ms ease; }
-.status { margin:14px 0 0; padding:12px 14px; border-radius:16px; border:1px solid transparent; font-weight:600; }
-.tone-info { background:rgba(15,118,110,0.08); border-color:rgba(15,118,110,0.16); }
-.tone-success { background:rgba(33,163,125,0.1); border-color:rgba(33,163,125,0.18); }
-.tone-warn { background:rgba(214,75,75,0.08); border-color:rgba(214,75,75,0.2); }
-.summary-grid { display:grid; gap:16px; grid-template-columns:repeat(4,minmax(180px,1fr)); }
-.stat-pill { min-width:120px; padding:10px 12px; border-radius:18px; background:rgba(255,255,255,0.72); border:1px solid var(--line); display:grid; gap:4px; }
-.stat-pill span { font-size:0.78rem; color:var(--muted); }
-.legend { margin-bottom:16px; color:var(--muted); font-size:0.95rem; }
-.legend span { display:inline-flex; align-items:center; gap:8px; }
-.legend-swatch { width:14px; height:14px; border-radius:4px; display:inline-block; }
-.legend-swatch.danger { background:var(--danger-bg); border:1px solid var(--danger-line); }
-.legend-swatch.warning { background:var(--warning-bg); border:1px solid var(--warning-line); }
-.legend-swatch.neutral { background:var(--neutral-bg); border:1px solid rgba(15,118,110,0.3); }
-.table-wrap { overflow-x:auto; border-radius:20px; border:1px solid var(--line); background:rgba(255,255,255,0.62); }
-table { width:100%; min-width:1560px; border-collapse:collapse; background:rgba(255,255,255,0.64); table-layout:fixed; }
-col.col-name{width:160px} col.col-ingredient{width:160px} col.col-uses{width:190px} col.col-kind{width:120px} col.col-category{width:125px} col.col-money{width:140px} col.col-tax-toggle{width:120px} col.col-tax-rate{width:90px} col.col-tax-amount{width:130px} col.col-source{width:140px} col.col-remove{width:96px}
-thead th,tfoot td { background:rgba(34,24,14,0.06); text-align:left; font-size:0.84rem; color:var(--muted); padding:12px 10px; line-height:1.2; }
-tbody td { padding:8px; border-top:1px solid rgba(74,58,32,0.08); vertical-align:top; }
-.table-wrap tbody input,.table-wrap tbody select { padding:9px 10px; min-height:42px; font-size:0.92rem; line-height:1.2; }
-.table-summary { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); gap:12px; margin-bottom:14px; }
-.summary-card { border-radius:18px; border:1px solid var(--line); background:rgba(255,255,255,0.72); padding:12px 14px; display:grid; gap:4px; }
-.summary-card span { font-size:0.8rem; color:var(--muted); }
-.summary-card strong { font-size:1.15rem; }
-.summary-card.final-card { background:linear-gradient(135deg,rgba(15,118,110,0.12),rgba(198,111,71,0.08)); border-color:rgba(15,118,110,0.22); }
-.summary-card em { font-style:normal; font-size:0.82rem; color:var(--muted); }
-.tfoot-final { display:grid; gap:4px; }
-.tfoot-final strong { font-size:1rem; }
-.tfoot-final small { color:var(--muted); font-size:0.8rem; }
-tbody tr.row-vitamin { background:var(--danger-bg); box-shadow:inset 4px 0 0 var(--danger-line); }
-tbody tr.row-daily { background:var(--warning-bg); box-shadow:inset 4px 0 0 var(--warning-line); }
-tbody tr.row-medicine { background:rgba(255,255,255,0.76); }
-.empty-cell { font-weight:700; color:var(--primary-deep); }
-.checkbox-cell { min-width:110px; }
-.checkbox-wrap { display:inline-flex; align-items:center; gap:8px; font-weight:600; color:var(--muted); }
-.row-delete { border:0; background:rgba(214,75,75,0.12); color:#8f2f2f; border-radius:12px; padding:10px 12px; font-weight:700; cursor:pointer; width:100%; white-space:nowrap; }
-@keyframes rise { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-@media(max-width:1080px){.workspace,.summary-grid{grid-template-columns:1fr}.hero{flex-direction:column}.table-summary{grid-template-columns:repeat(2,minmax(150px,1fr))}}
-@media(max-width:720px){.page-shell{width:min(100% - 18px,100%);margin:12px auto 24px}.panel{padding:18px;border-radius:20px}h1{font-size:2rem}.preview-frame{min-height:260px}.table-summary{grid-template-columns:1fr}}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Trebuchet MS", "Aptos", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(198, 111, 71, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.16), transparent 32%),
+    linear-gradient(180deg, #f9f3e7 0%, #f2eadb 100%);
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(62, 48, 24, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(62, 48, 24, 0.03) 1px, transparent 1px);
+  background-size: 26px 26px;
+  pointer-events: none;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 92%);
+}
+
+.page-shell {
+  width: min(1380px, calc(100% - 32px));
+  margin: 24px auto 40px;
+  display: grid;
+  gap: 20px;
+}
+
+.panel {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  animation: rise 450ms ease both;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  right: -40px;
+  top: -50px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15, 118, 110, 0.18), transparent 65%);
+  pointer-events: none;
+}
+
+.eyebrow,
+.section-kicker {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: Georgia, "Palatino Linotype", serif;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.02;
+}
+
+h2 {
+  font-size: 1.45rem;
+}
+
+.hero-copy {
+  max-width: 760px;
+  margin: 14px 0 0;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.helper-copy {
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.helper-copy code,
+.hero-note code {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.92em;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.15rem 0.4rem;
+  border-radius: 8px;
+}
+
+.hero-note,
+.tip-card {
+  min-width: 280px;
+  max-width: 360px;
+  border-radius: 20px;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(198, 111, 71, 0.08));
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  display: grid;
+  gap: 8px;
+  line-height: 1.55;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 20px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.file-button {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  padding: 12px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.file-button:hover,
+.primary-button:hover,
+.ghost-button:hover {
+  transform: translateY(-1px);
+}
+
+.file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.preview-frame {
+  position: relative;
+  min-height: 380px;
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(198, 111, 71, 0.06)),
+    var(--panel-strong);
+  border: 1px dashed rgba(15, 118, 110, 0.28);
+}
+
+#previewCanvas {
+  display: none;
+  width: 100%;
+  height: auto;
+}
+
+.empty-preview {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 28px;
+  color: var(--muted);
+}
+
+.control-strip,
+.action-row,
+.table-actions,
+.legend,
+.stats-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.control-strip,
+.action-row {
+  margin-top: 16px;
+}
+
+.inline-field,
+.field,
+.text-block {
+  display: grid;
+  gap: 8px;
+}
+
+.inline-field span,
+.field span,
+.text-block span {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(74, 58, 32, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 12px 14px;
+  color: var(--ink);
+  font: inherit;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+textarea {
+  min-height: 320px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(15, 118, 110, 0.58);
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+}
+
+.primary-button,
+.ghost-button {
+  appearance: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.primary-button {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+}
+
+.ghost-button {
+  border: 1px solid rgba(15, 118, 110, 0.24);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  margin-top: 18px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--primary));
+  transition: width 180ms ease;
+}
+
+.status {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+
+.tone-info {
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.16);
+}
+
+.tone-success {
+  background: rgba(33, 163, 125, 0.1);
+  border-color: rgba(33, 163, 125, 0.18);
+}
+
+.tone-warn {
+  background: rgba(214, 75, 75, 0.08);
+  border-color: rgba(214, 75, 75, 0.2);
+}
+
+.summary-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.stat-pill {
+  min-width: 120px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+
+.stat-pill span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.legend {
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.legend-swatch.danger {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-line);
+}
+
+.legend-swatch.warning {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-line);
+}
+
+.legend-swatch.neutral {
+  background: var(--neutral-bg);
+  border: 1px solid rgba(15, 118, 110, 0.3);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+table {
+  width: 100%;
+  min-width: 1560px;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.64);
+  table-layout: fixed;
+}
+
+col.col-name {
+  width: 160px;
+}
+
+col.col-ingredient {
+  width: 160px;
+}
+
+col.col-uses {
+  width: 190px;
+}
+
+col.col-kind {
+  width: 120px;
+}
+
+col.col-category {
+  width: 125px;
+}
+
+col.col-money {
+  width: 140px;
+}
+
+col.col-tax-toggle {
+  width: 120px;
+}
+
+col.col-tax-rate {
+  width: 90px;
+}
+
+col.col-tax-amount {
+  width: 130px;
+}
+
+col.col-source {
+  width: 140px;
+}
+
+col.col-remove {
+  width: 96px;
+}
+
+thead th,
+tfoot td {
+  background: rgba(34, 24, 14, 0.06);
+  text-align: left;
+  font-size: 0.84rem;
+  color: var(--muted);
+  padding: 12px 10px;
+  line-height: 1.2;
+}
+
+tbody td {
+  padding: 8px;
+  border-top: 1px solid rgba(74, 58, 32, 0.08);
+  vertical-align: top;
+}
+
+.table-wrap tbody input,
+.table-wrap tbody select {
+  padding: 9px 10px;
+  min-height: 42px;
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.table-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.summary-card {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.summary-card span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.summary-card strong {
+  font-size: 1.15rem;
+}
+
+.summary-card.final-card {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(198, 111, 71, 0.08));
+  border-color: rgba(15, 118, 110, 0.22);
+}
+
+.summary-card em {
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.tfoot-final {
+  display: grid;
+  gap: 4px;
+}
+
+.tfoot-final strong {
+  color: var(--accent-strong);
+  font-size: 1rem;
+}
+
+.tfoot-final small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+tbody tr.row-vitamin {
+  background: var(--danger-bg);
+  box-shadow: inset 4px 0 0 var(--danger-line);
+}
+
+tbody tr.row-daily {
+  background: var(--warning-bg);
+  box-shadow: inset 4px 0 0 var(--warning-line);
+}
+
+tbody tr.row-medicine {
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.discount-cell,
+.empty-cell {
+  font-weight: 700;
+  color: var(--primary-deep);
+}
+
+.checkbox-cell {
+  min-width: 110px;
+}
+
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.row-delete {
+  border: 0;
+  background: rgba(214, 75, 75, 0.12);
+  color: #8f2f2f;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  white-space: nowrap;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1080px) {
+  .workspace,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    flex-direction: column;
+  }
+
+  .table-summary {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    width: min(100% - 18px, 100%);
+    margin: 12px auto 24px;
+  }
+
+  .panel {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .preview-frame {
+    min-height: 260px;
+  }
+
+  .table-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>
-</head>
-<body>
-<div class="page-shell">
-<header class="hero panel">
-  <div>
-    <p class="eyebrow">Gemini-powered</p>
-    <h1>Invoice Medicine Extractor</h1>
-    <p class="hero-copy">Upload a hospital or pharmacy invoice image and review an Excel-like medicine sheet with provider name, invoice date, provider type, discounts, totals, and tax details.</p>
-  </div>
-  <div class="hero-note">
-    <strong>Secure key handling.</strong>
-    <span>Your Gemini API key is stored securely on the server. You do not need to enter it here.</span>
-  </div>
-</header>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero panel">
+        <div>
+          <p class="eyebrow">Gemini-powered</p>
+          <h1>Invoice Medicine Extractor</h1>
+          <p class="hero-copy">
+            Upload a hospital or pharmacy invoice image, send it to Gemini from
+            your local machine, and review an Excel-like medicine sheet with
+            provider name, invoice date, provider type, discounts, totals, and
+            tax details.
+          </p>
+        </div>
+        <div class="hero-note">
+          <strong>Local server, safer key handling.</strong>
+          <span>
+            Keep the Gemini key in a local <code>.env</code> file if possible.
+            The password field below is only a session fallback and is not saved.
+          </span>
+        </div>
+      </header>
 
-<main class="workspace">
-  <section class="panel upload-panel">
-    <div class="panel-head">
-      <div><p class="section-kicker">Step 1</p><h2>Upload &amp; Extract</h2></div>
-      <label class="file-button">
-        <input id="invoiceInput" type="file" accept="image/*" />
-        <span>Choose invoice image</span>
-      </label>
-    </div>
-    <label class="field">
-      <span>Gemini API key (optional override)</span>
-      <input id="sessionApiKey" type="password" placeholder="Key is configured on server — leave blank" />
-    </label>
-    <p class="helper-copy">Leave the key field blank — the server key will be used automatically.</p>
-    <div class="preview-frame">
-      <canvas id="previewCanvas"></canvas>
-      <div id="emptyPreview" class="empty-preview">
-        <strong>Preview will appear here</strong>
-        <span>Upload a JPG, PNG, or phone photo. Rotate before extraction if the page is sideways.</span>
-      </div>
-    </div>
-    <div class="control-strip">
-      <button id="rotateLeftBtn" class="ghost-button" type="button">Rotate left</button>
-      <button id="rotateRightBtn" class="ghost-button" type="button">Rotate right</button>
-    </div>
-    <div class="action-row">
-      <button id="runOcrBtn" class="primary-button" type="button">Run AI extraction</button>
-      <button id="parseTextBtn" class="ghost-button" type="button">Parse edited text</button>
-      <button id="resetBtn" class="ghost-button" type="button">Reset</button>
-    </div>
-    <div class="progress-track" aria-hidden="true"><span id="progressFill"></span></div>
-    <p id="statusText" class="status tone-info">Upload an invoice image, then click Run AI extraction.</p>
-  </section>
+      <main class="workspace">
+        <section class="panel upload-panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">Step 1</p>
+              <h2>Upload & Extract</h2>
+            </div>
+            <label class="file-button">
+              <input id="invoiceInput" type="file" accept="image/*" />
+              <span>Choose invoice image</span>
+            </label>
+          </div>
 
-  <section class="panel analysis-panel">
-    <div class="panel-head">
-      <div><p class="section-kicker">Step 2</p><h2>AI Review</h2></div>
-      <div class="stats-cluster">
-        <div class="stat-pill"><span>Detected lines</span><strong id="itemCount">0</strong></div>
-        <div class="stat-pill"><span>AI confidence</span><strong id="ocrConfidence">-</strong></div>
-      </div>
-    </div>
-    <label class="text-block">
-      <span>Model transcription / pasted text fallback</span>
-      <textarea id="ocrText" spellcheck="false" placeholder="Gemini notes or raw text will appear here. You can also paste invoice text manually and click 'Parse edited text'."></textarea>
-    </label>
-    <div class="tip-card">
-      <strong>Extraction hint</strong>
-      <span>Gemini returns structured JSON for provider, invoice date, provider type, active ingredients, tax mode, and per-drug amounts. You can manually fix the sheet before export.</span>
-    </div>
-  </section>
-</main>
+          <label class="field">
+            <span>Gemini API key for this session only</span>
+            <input
+              id="sessionApiKey"
+              type="password"
+              placeholder="Leave blank if GEMINI_API_KEY is already set in .env"
+            />
+          </label>
 
-<section class="panel summary-panel">
-  <div class="panel-head"><div><p class="section-kicker">Step 3</p><h2>Invoice Summary</h2></div></div>
-  <div class="summary-grid">
-    <label class="field"><span>Provider name</span><input id="providerNameInput" type="text" placeholder="Detected provider" /></label>
-    <label class="field"><span>Invoice date</span><input id="invoiceDateInput" type="text" placeholder="Detected date" /></label>
-    <label class="field"><span>Provider type</span>
-      <select id="providerTypeInput">
-        <option value="unknown">Unknown</option>
-        <option value="pharmacy">Pharmacy</option>
-        <option value="hospital">Hospital</option>
-      </select>
-    </label>
-    <label class="field"><span>Tax mode</span>
-      <select id="taxModeInput">
-        <option value="unknown">Unknown</option>
-        <option value="included">Tax included</option>
-        <option value="not_included">Tax not included</option>
-        <option value="mixed">Mixed</option>
-      </select>
-    </label>
-  </div>
-</section>
+          <p class="helper-copy">
+            Because the previous key was pasted into chat, treat it as exposed
+            and rotate it in Google AI Studio before using this app.
+          </p>
 
-<section class="panel table-panel">
-  <div class="panel-head">
-    <div><p class="section-kicker">Step 4</p><h2>Medication Sheet</h2></div>
-    <div class="table-actions">
-      <button id="addRowBtn" class="ghost-button" type="button">Add row</button>
-      <button id="fillDrugDetailsBtn" class="ghost-button" type="button">Fill drug details</button>
-      <button id="exportBtn" class="primary-button" type="button">Download CSV</button>
+          <div class="preview-frame">
+            <canvas id="previewCanvas"></canvas>
+            <div id="emptyPreview" class="empty-preview">
+              <strong>Preview will appear here</strong>
+              <span>
+                Upload a JPG, PNG, or phone photo. Rotate before extraction if
+                the page is sideways.
+              </span>
+            </div>
+          </div>
+
+          <div class="control-strip">
+            <button id="rotateLeftBtn" class="ghost-button" type="button">
+              Rotate left
+            </button>
+            <button id="rotateRightBtn" class="ghost-button" type="button">
+              Rotate right
+            </button>
+          </div>
+
+          <div class="action-row">
+            <button id="runOcrBtn" class="primary-button" type="button">
+              Run AI extraction
+            </button>
+            <button id="parseTextBtn" class="ghost-button" type="button">
+              Parse edited text
+            </button>
+            <button id="resetBtn" class="ghost-button" type="button">
+              Reset
+            </button>
+          </div>
+
+          <div class="progress-track" aria-hidden="true">
+            <span id="progressFill"></span>
+          </div>
+
+          <p id="statusText" class="status tone-info">
+            Start the local server, add a Gemini key, then upload an invoice.
+          </p>
+        </section>
+
+        <section class="panel analysis-panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">Step 2</p>
+              <h2>AI Review</h2>
+            </div>
+            <div class="stats-cluster">
+              <div class="stat-pill">
+                <span>Detected lines</span>
+                <strong id="itemCount">0</strong>
+              </div>
+              <div class="stat-pill">
+                <span>AI confidence</span>
+                <strong id="ocrConfidence">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <label class="text-block">
+            <span>Model transcription / pasted text fallback</span>
+            <textarea
+              id="ocrText"
+              spellcheck="false"
+              placeholder="Gemini notes or raw text will appear here. You can also paste invoice text manually, fix mistakes, and click 'Parse edited text'."
+            ></textarea>
+          </label>
+
+          <div class="tip-card">
+            <strong>Extraction hint</strong>
+            <span>
+              Gemini returns structured JSON for provider, invoice date,
+              provider type, active ingredients, tax mode, and per-drug amounts.
+              You can still manually fix the sheet before export, and pressing
+              Enter in the table commits the row values.
+            </span>
+          </div>
+        </section>
+      </main>
+
+      <section class="panel summary-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">Step 3</p>
+            <h2>Invoice Summary</h2>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <label class="field">
+            <span>Provider name</span>
+            <input id="providerNameInput" type="text" placeholder="Detected provider" />
+          </label>
+
+          <label class="field">
+            <span>Invoice date</span>
+            <input id="invoiceDateInput" type="text" placeholder="Detected date" />
+          </label>
+
+          <label class="field">
+            <span>Provider type</span>
+            <select id="providerTypeInput">
+              <option value="unknown">Unknown</option>
+              <option value="pharmacy">Pharmacy</option>
+              <option value="hospital">Hospital</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Tax mode</span>
+            <select id="taxModeInput">
+              <option value="unknown">Unknown</option>
+              <option value="included">Tax included</option>
+              <option value="not_included">Tax not included</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-head">
+          <div>
+            <p class="section-kicker">Step 4</p>
+            <h2>Medication Sheet</h2>
+          </div>
+          <div class="table-actions">
+            <button id="addRowBtn" class="ghost-button" type="button">
+              Add row
+            </button>
+            <button id="fillDrugDetailsBtn" class="ghost-button" type="button">
+              Fill drug details
+            </button>
+            <button id="exportBtn" class="primary-button" type="button">
+              Download CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span><i class="legend-swatch danger"></i> Vitamin / food supplement</span>
+          <span><i class="legend-swatch warning"></i> Phyto / daily care</span>
+          <span><i class="legend-swatch neutral"></i> Regular medicine</span>
+        </div>
+
+        <div class="table-summary">
+          <div class="summary-card">
+            <span>Before discount</span>
+            <strong id="summaryBefore">0.00</strong>
+          </div>
+          <div class="summary-card">
+            <span>Discount</span>
+            <strong id="summaryDiscount">0.00</strong>
+          </div>
+          <div class="summary-card">
+            <span>After discount</span>
+            <strong id="summaryAfter">0.00</strong>
+          </div>
+          <div class="summary-card">
+            <span>Total tax</span>
+            <strong id="summaryTax">0.00</strong>
+          </div>
+          <div class="summary-card final-card">
+            <span>Final amount</span>
+            <strong id="summaryFinal">0.00</strong>
+            <em id="summaryFinalFormula">0.00 + 0.00 tax</em>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <colgroup>
+              <col class="col-name" />
+              <col class="col-ingredient" />
+              <col class="col-uses" />
+              <col class="col-kind" />
+              <col class="col-category" />
+              <col class="col-money" />
+              <col class="col-money" />
+              <col class="col-money" />
+              <col class="col-tax-toggle" />
+              <col class="col-tax-rate" />
+              <col class="col-tax-amount" />
+              <col class="col-source" />
+              <col class="col-remove" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Medication name</th>
+                <th>Active ingredient</th>
+                <th>Uses</th>
+                <th>Brand / Generic</th>
+                <th>Category</th>
+                <th>Before discount</th>
+                <th>Discount</th>
+                <th>After discount</th>
+                <th>Tax included</th>
+                <th>Tax %</th>
+                <th>Tax amount</th>
+                <th>Source line</th>
+                <th>Remove</th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5">Totals</td>
+                <td id="totalBefore">0.00</td>
+                <td id="totalDiscount">0.00</td>
+                <td id="totalAfter">0.00</td>
+                <td>-</td>
+                <td>-</td>
+                <td id="totalTax">0.00</td>
+                <td colspan="2">
+                  <div class="tfoot-final">
+                    <span>Final amount</span>
+                    <strong id="tableFinal">0.00</strong>
+                    <small id="tableFinalFormula">0.00 + 0.00 tax</small>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
     </div>
-  </div>
-  <div class="legend">
-    <span><i class="legend-swatch danger"></i> Vitamin / food supplement</span>
-    <span><i class="legend-swatch warning"></i> Phyto / daily care</span>
-    <span><i class="legend-swatch neutral"></i> Regular medicine</span>
-  </div>
-  <div class="table-summary">
-    <div class="summary-card"><span>Before discount</span><strong id="summaryBefore">0.00</strong></div>
-    <div class="summary-card"><span>Discount</span><strong id="summaryDiscount">0.00</strong></div>
-    <div class="summary-card"><span>After discount</span><strong id="summaryAfter">0.00</strong></div>
-    <div class="summary-card"><span>Total tax</span><strong id="summaryTax">0.00</strong></div>
-    <div class="summary-card final-card"><span>Final amount</span><strong id="summaryFinal">0.00</strong><em id="summaryFinalFormula">0.00 + 0.00 tax</em></div>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <colgroup>
-        <col class="col-name"/><col class="col-ingredient"/><col class="col-uses"/><col class="col-kind"/><col class="col-category"/>
-        <col class="col-money"/><col class="col-money"/><col class="col-money"/><col class="col-tax-toggle"/><col class="col-tax-rate"/><col class="col-tax-amount"/><col class="col-source"/><col class="col-remove"/>
-      </colgroup>
-      <thead>
-        <tr>
-          <th>Medication name</th><th>Active ingredient</th><th>Uses</th><th>Brand / Generic</th><th>Category</th>
-          <th>Before discount</th><th>Discount</th><th>After discount</th><th>Tax included</th><th>Tax %</th><th>Tax amount</th><th>Source line</th><th>Remove</th>
-        </tr>
-      </thead>
-      <tbody id="itemsBody"></tbody>
-      <tfoot>
-        <tr>
-          <td colspan="5">Totals</td>
-          <td id="totalBefore">0.00</td><td id="totalDiscount">0.00</td><td id="totalAfter">0.00</td>
-          <td>-</td><td>-</td><td id="totalTax">0.00</td>
-          <td colspan="2"><div class="tfoot-final"><span>Final amount</span><strong id="tableFinal">0.00</strong><small id="tableFinalFormula">0.00 + 0.00 tax</small></div></td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
-</section>
-</div>
+    <script>
+const CATEGORY_LABELS = {
+  medicine: "Medicine",
+  vitamin: "Vitamin / Food supplement",
+  daily: "Phyto / Daily care",
+};
 
-<script>
-const CATEGORY_LABELS = { medicine: "Medicine", vitamin: "Vitamin / Food supplement", daily: "Phyto / Daily care" };
-const PROVIDER_TYPE_LABELS = { unknown: "Unknown", pharmacy: "Pharmacy", hospital: "Hospital" };
-const TAX_MODE_LABELS = { unknown: "Unknown", included: "Tax included", not_included: "Tax not included", mixed: "Mixed" };
-const DRUG_KIND_LABELS = { brand: "Brand", generic: "Generic", unknown: "Unknown" };
+const PROVIDER_TYPE_LABELS = {
+  unknown: "Unknown",
+  pharmacy: "Pharmacy",
+  hospital: "Hospital",
+};
+
+const TAX_MODE_LABELS = {
+  unknown: "Unknown",
+  included: "Tax included",
+  not_included: "Tax not included",
+  mixed: "Mixed",
+};
+
+const DRUG_KIND_LABELS = {
+  brand: "Brand",
+  generic: "Generic",
+  unknown: "Unknown",
+};
 
 let itemCounter = 0;
-const state = { imageName: "", sourceImage: null, rotation: 0, reviewText: "", confidenceLabel: "-", summary: defaultSummary(), items: [] };
+
+const state = {
+  imageName: "",
+  sourceImage: null,
+  rotation: 0,
+  reviewText: "",
+  confidenceLabel: "-",
+  summary: defaultSummary(),
+  items: [],
+};
+
 const refs = {};
 
 document.addEventListener("DOMContentLoaded", () => {
-  ["invoiceInput","sessionApiKey","previewCanvas","emptyPreview","runOcrBtn","parseTextBtn","rotateLeftBtn","rotateRightBtn","resetBtn","statusText","progressFill","ocrText","providerNameInput","invoiceDateInput","providerTypeInput","taxModeInput","itemCount","ocrConfidence","itemsBody","totalBefore","totalDiscount","totalAfter","totalTax","summaryBefore","summaryDiscount","summaryAfter","summaryTax","summaryFinal","summaryFinalFormula","tableFinal","tableFinalFormula","addRowBtn","fillDrugDetailsBtn","exportBtn"].forEach(id => { refs[id] = document.querySelector("#" + id); });
-  bindEvents(); syncSummaryInputs(); renderPreview(); renderItems(); updateTotals(); updateStats();
-  setStatus("Upload an invoice image, then click Run AI extraction.", "info");
+  refs.invoiceInput = document.querySelector("#invoiceInput");
+  refs.sessionApiKey = document.querySelector("#sessionApiKey");
+  refs.previewCanvas = document.querySelector("#previewCanvas");
+  refs.emptyPreview = document.querySelector("#emptyPreview");
+  refs.runOcrBtn = document.querySelector("#runOcrBtn");
+  refs.parseTextBtn = document.querySelector("#parseTextBtn");
+  refs.rotateLeftBtn = document.querySelector("#rotateLeftBtn");
+  refs.rotateRightBtn = document.querySelector("#rotateRightBtn");
+  refs.resetBtn = document.querySelector("#resetBtn");
+  refs.statusText = document.querySelector("#statusText");
+  refs.progressFill = document.querySelector("#progressFill");
+  refs.ocrText = document.querySelector("#ocrText");
+  refs.providerNameInput = document.querySelector("#providerNameInput");
+  refs.invoiceDateInput = document.querySelector("#invoiceDateInput");
+  refs.providerTypeInput = document.querySelector("#providerTypeInput");
+  refs.taxModeInput = document.querySelector("#taxModeInput");
+  refs.itemCount = document.querySelector("#itemCount");
+  refs.ocrConfidence = document.querySelector("#ocrConfidence");
+  refs.itemsBody = document.querySelector("#itemsBody");
+  refs.totalBefore = document.querySelector("#totalBefore");
+  refs.totalDiscount = document.querySelector("#totalDiscount");
+  refs.totalAfter = document.querySelector("#totalAfter");
+  refs.totalTax = document.querySelector("#totalTax");
+  refs.summaryBefore = document.querySelector("#summaryBefore");
+  refs.summaryDiscount = document.querySelector("#summaryDiscount");
+  refs.summaryAfter = document.querySelector("#summaryAfter");
+  refs.summaryTax = document.querySelector("#summaryTax");
+  refs.summaryFinal = document.querySelector("#summaryFinal");
+  refs.summaryFinalFormula = document.querySelector("#summaryFinalFormula");
+  refs.tableFinal = document.querySelector("#tableFinal");
+  refs.tableFinalFormula = document.querySelector("#tableFinalFormula");
+  refs.addRowBtn = document.querySelector("#addRowBtn");
+  refs.fillDrugDetailsBtn = document.querySelector("#fillDrugDetailsBtn");
+  refs.exportBtn = document.querySelector("#exportBtn");
+
+  bindEvents();
+  syncSummaryInputs();
+  renderPreview();
+  renderItems();
+  updateTotals();
+  updateStats();
+
+  if (window.location.protocol === "file:") {
+    setStatus(
+      "Enter a Gemini API key, upload an invoice image, then run extraction.",
+      "info",
+    );
+  } else {
+    setStatus("Open the page, enter a Gemini API key, then upload an invoice.", "info");
+  }
 });
 
 function bindEvents() {
@@ -251,377 +1007,1623 @@ function bindEvents() {
   refs.addRowBtn.addEventListener("click", addManualRow);
   refs.fillDrugDetailsBtn.addEventListener("click", fillDrugDetails);
   refs.exportBtn.addEventListener("click", exportSheet);
-  refs.providerNameInput.addEventListener("input", () => { state.summary.providerName = refs.providerNameInput.value.trim(); });
-  refs.invoiceDateInput.addEventListener("input", () => { state.summary.invoiceDate = refs.invoiceDateInput.value.trim(); });
-  refs.providerTypeInput.addEventListener("change", () => { state.summary.providerType = refs.providerTypeInput.value; });
-  refs.taxModeInput.addEventListener("change", () => { state.summary.taxMode = refs.taxModeInput.value; });
+
+  refs.providerNameInput.addEventListener("input", () => {
+    state.summary.providerName = refs.providerNameInput.value.trim();
+  });
+
+  refs.invoiceDateInput.addEventListener("input", () => {
+    state.summary.invoiceDate = refs.invoiceDateInput.value.trim();
+  });
+
+  refs.providerTypeInput.addEventListener("change", () => {
+    state.summary.providerType = refs.providerTypeInput.value;
+  });
+
+  refs.taxModeInput.addEventListener("change", () => {
+    state.summary.taxMode = refs.taxModeInput.value;
+  });
+
   refs.itemsBody.addEventListener("input", handleTableInput);
   refs.itemsBody.addEventListener("change", handleTableInput);
   refs.itemsBody.addEventListener("keydown", handleTableKeydown);
   refs.itemsBody.addEventListener("click", handleTableClick);
 }
 
-function defaultSummary() { return { providerName: "", invoiceDate: "", providerType: "unknown", taxMode: "unknown" }; }
-function nextItemId() { itemCounter += 1; return "item-" + itemCounter; }
-
-function createItem(partial) {
-  partial = partial || {};
-  const item = {
-    id: nextItemId(), name: "", activeIngredient: "", uses: "", genericOrBrand: "unknown",
-    category: "medicine", amountBefore: 0, discount: 0, amountAfter: 0,
-    taxIncluded: false, taxRate: 0, taxAmount: 0, autoTax: true, rawLine: ""
+function defaultSummary() {
+  return {
+    providerName: "",
+    invoiceDate: "",
+    providerType: "unknown",
+    taxMode: "unknown",
   };
-  // Merge partial — replaces the broken ...partial spread
-  Object.keys(partial).forEach(function(k) { item[k] = partial[k]; });
+}
 
-  const d = lookupDrugInfo(item.name, item.rawLine);
-  if (!item.activeIngredient) item.activeIngredient = d.activeIngredient;
-  if (!item.uses) item.uses = d.uses || inferDrugUses(item.activeIngredient + " " + item.name + " " + item.rawLine);
-  if (!item.genericOrBrand || item.genericOrBrand === "unknown") item.genericOrBrand = d.genericOrBrand;
-  if (item.autoTax) item.taxAmount = computeTaxAmount(item);
+function nextItemId() {
+  itemCounter += 1;
+  return `item-${itemCounter}`;
+}
+
+function createItem(partial = {}) {
+  const item = {
+    id: nextItemId(),
+    name: "",
+    activeIngredient: "",
+    uses: "",
+    genericOrBrand: "unknown",
+    category: "medicine",
+    amountBefore: 0,
+    discount: 0,
+    amountAfter: 0,
+    taxIncluded: false,
+    taxRate: 0,
+    taxAmount: 0,
+    autoTax: true,
+    rawLine: "",
+    ...partial,
+  };
+
+  const inferredDrugInfo = lookupDrugInfo(item.name, item.rawLine);
+  if (!item.activeIngredient) {
+    item.activeIngredient = inferredDrugInfo.activeIngredient;
+  }
+  if (!item.uses) {
+    item.uses = inferredDrugInfo.uses || inferDrugUses(`${item.activeIngredient} ${item.name} ${item.rawLine}`);
+  }
+  if (!item.genericOrBrand || item.genericOrBrand === "unknown") {
+    item.genericOrBrand = inferredDrugInfo.genericOrBrand;
+  }
+
+  if (item.autoTax) {
+    item.taxAmount = computeTaxAmount(item);
+  }
+
   return item;
 }
 
 function handleFileSelection(event) {
-  const file = (event.target.files || [])[0];
-  if (!file) return;
+  const [file] = event.target.files || [];
+  if (!file) {
+    return;
+  }
+
   const reader = new FileReader();
-  reader.onload = function() {
+  reader.onload = () => {
     const image = new Image();
-    image.onload = function() { state.sourceImage = image; state.imageName = file.name; state.rotation = 0; renderPreview(); setStatus(file.name + " loaded. Rotate if needed, then run AI extraction.", "success"); };
+    image.onload = () => {
+      state.sourceImage = image;
+      state.imageName = file.name;
+      state.rotation = 0;
+      renderPreview();
+      setStatus(
+        `${file.name} loaded. Rotate if needed, then run AI extraction.`,
+        "success",
+      );
+    };
     image.src = reader.result;
   };
+
   reader.readAsDataURL(file);
 }
 
 function rotatePreview(delta) {
-  if (!state.sourceImage) { setStatus("Upload an invoice image before rotating.", "warn"); return; }
+  if (!state.sourceImage) {
+    setStatus("Upload an invoice image before rotating the preview.", "warn");
+    return;
+  }
+
   state.rotation = (state.rotation + delta + 360) % 360;
   renderPreview();
+  setStatus("Preview rotation updated. Run extraction when the invoice looks upright.", "info");
 }
 
 function renderPreview() {
-  const canvas = refs.previewCanvas, empty = refs.emptyPreview;
-  if (!state.sourceImage) { canvas.style.display = "none"; empty.style.display = "grid"; return; }
-  const wc = buildOrientedCanvas(1600), ctx = canvas.getContext("2d");
-  canvas.width = wc.width; canvas.height = wc.height;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(wc, 0, 0);
-  canvas.style.display = "block"; empty.style.display = "none";
+  const canvas = refs.previewCanvas;
+  const empty = refs.emptyPreview;
+
+  if (!state.sourceImage) {
+    canvas.style.display = "none";
+    empty.style.display = "grid";
+    return;
+  }
+
+  const workingCanvas = buildOrientedCanvas(1600);
+  const context = canvas.getContext("2d");
+
+  canvas.width = workingCanvas.width;
+  canvas.height = workingCanvas.height;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(workingCanvas, 0, 0);
+
+  canvas.style.display = "block";
+  empty.style.display = "none";
 }
 
 function buildOrientedCanvas(maxDimension) {
-  const img = state.sourceImage, scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
-  const sw = Math.round(img.width * scale), sh = Math.round(img.height * scale), r = state.rotation, swap = r === 90 || r === 270;
+  const image = state.sourceImage;
+  const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+  const sourceWidth = Math.round(image.width * scale);
+  const sourceHeight = Math.round(image.height * scale);
+  const rotation = state.rotation;
+  const swapAxes = rotation === 90 || rotation === 270;
+
   const canvas = document.createElement("canvas");
-  canvas.width = swap ? sh : sw; canvas.height = swap ? sw : sh;
-  const ctx = canvas.getContext("2d");
-  ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(r * Math.PI / 180);
-  ctx.drawImage(img, -sw / 2, -sh / 2, sw, sh); ctx.restore();
+  canvas.width = swapAxes ? sourceHeight : sourceWidth;
+  canvas.height = swapAxes ? sourceWidth : sourceHeight;
+
+  const context = canvas.getContext("2d");
+  context.save();
+  context.translate(canvas.width / 2, canvas.height / 2);
+  context.rotate((rotation * Math.PI) / 180);
+  context.drawImage(
+    image,
+    -sourceWidth / 2,
+    -sourceHeight / 2,
+    sourceWidth,
+    sourceHeight,
+  );
+  context.restore();
+
   return canvas;
 }
 
 async function runAiExtraction() {
-  if (!state.sourceImage) { setStatus("Upload an invoice image before running AI extraction.", "warn"); return; }
-  setButtonsDisabled(true); setProgress(10); setStatus("Sending invoice to Gemini...", "info");
+  if (window.location.protocol === "file:") {
+    setStatus("This page must run from http://localhost:3000, not directly from the file system.", "warn");
+    return;
+  }
+
+  if (!state.sourceImage) {
+    setStatus("Upload an invoice image before running AI extraction.", "warn");
+    return;
+  }
+
+  setButtonsDisabled(true);
+  setProgress(10);
+  setStatus("Sending the invoice image to your local Gemini route...", "info");
+
   try {
-    const canvas = buildOrientedCanvas(2200), dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-    const parts = dataUrl.split(","), mimeTypeMatch = parts[0].match(/data:(.*?);base64/i);
-    const imageBase64 = parts[1];
+    const canvas = buildOrientedCanvas(2200);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    const [prefix, imageBase64] = dataUrl.split(",");
+    const mimeTypeMatch = prefix.match(/data:(.*?);base64/i);
     const sessionApiKey = refs.sessionApiKey.value.trim();
+
     const response = await fetch("/api/extract-invoice", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mimeType: mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg", imageBase64, fileName: state.imageName, sessionApiKey })
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        mimeType: mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg",
+        imageBase64,
+        fileName: state.imageName,
+        sessionApiKey,
+      }),
     });
+
     setProgress(75);
+
     let payload;
-    try { payload = await response.json(); } catch(e) { throw new Error("Server returned a non-JSON response."); }
-    if (!response.ok) throw new Error(payload.error || "Gemini extraction failed.");
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error("The local server returned a non-JSON response.");
+    }
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Gemini extraction failed.");
+    }
+
     applyAiExtraction(payload.extraction || payload);
     setProgress(100);
-    setStatus("AI extraction finished. Parsed " + state.items.length + " medication " + (state.items.length === 1 ? "row" : "rows") + ". Review every row before export.", "success");
+
+    const itemWord = state.items.length === 1 ? "row" : "rows";
+    setStatus(
+      `AI extraction finished. Parsed ${state.items.length} medication ${itemWord}. Review every row before export.`,
+      "success",
+    );
   } catch (error) {
-    console.error(error); setProgress(0); setStatus(error instanceof Error ? error.message : "Gemini extraction failed.", "warn");
+    console.error(error);
+    setProgress(0);
+    setStatus(
+      error instanceof Error ? error.message : "Gemini extraction failed.",
+      "warn",
+    );
   } finally {
-    setButtonsDisabled(false); updateStats();
+    setButtonsDisabled(false);
+    updateStats();
   }
 }
 
 function applyAiExtraction(result) {
-  state.summary = { providerName: asText(result.providerName), invoiceDate: asText(result.invoiceDate), providerType: normalizeProviderType(result.providerType), taxMode: normalizeTaxMode(result.taxMode) };
-  state.items = Array.isArray(result.items) ? result.items.map(normalizeExtractedItem).filter(function(i) { return i.name; }) : [];
-  state.reviewText = result.rawText ? "Model transcription:\n" + asText(result.rawText) : "AI extraction completed.";
+  const summary = {
+    providerName: asText(result.providerName),
+    invoiceDate: asText(result.invoiceDate),
+    providerType: normalizeProviderType(result.providerType),
+    taxMode: normalizeTaxMode(result.taxMode),
+  };
+
+  const items = Array.isArray(result.items)
+    ? result.items.map(normalizeExtractedItem).filter((item) => item.name)
+    : [];
+
+  state.summary = summary;
+  state.items = items;
+  state.reviewText = buildReviewText(result);
   state.confidenceLabel = result.notes ? "Review" : "AI";
+
   refs.ocrText.value = state.reviewText;
-  syncSummaryInputs(); renderItems(); updateTotals(); updateStats();
-  if (state.items.some(function(i) { return (i.category === "medicine" || i.category === "vitamin") && (!i.activeIngredient || !i.uses || i.genericOrBrand === "unknown"); })) {
-    fillDrugDetails({ silent: true });
+  syncSummaryInputs();
+  renderItems();
+  updateTotals();
+  updateStats();
+
+  if (
+    state.items.some(
+      (item) =>
+        (item.category === "medicine" || item.category === "vitamin") &&
+        (!item.activeIngredient || !item.uses || item.genericOrBrand === "unknown"),
+    )
+  ) {
+    void fillDrugDetails({ silent: true });
   }
 }
 
+function buildReviewText(result) {
+  const sections = [];
+
+  if (asText(result.rawText)) {
+    sections.push(`Model transcription:\n${asText(result.rawText)}`);
+  }
+
+  if (asText(result.notes)) {
+    sections.push(`Model notes:\n${asText(result.notes)}`);
+  }
+
+  if (!sections.length) {
+    sections.push("AI extraction completed. Edit this text and click 'Parse edited text' if you want the local fallback parser to run on your own text.");
+  }
+
+  return sections.join("\n\n");
+}
+
 function normalizeExtractedItem(raw) {
-  let amountBefore = toNumber(raw.amountBefore), amountAfter = toNumber(raw.amountAfter), discount = toNumber(raw.discount) > 0 ? toNumber(raw.discount) : 0;
-  if (!amountBefore && amountAfter && discount) amountBefore = amountAfter + discount;
-  if (!amountAfter && amountBefore && discount <= amountBefore) amountAfter = amountBefore - discount;
-  if (!amountAfter && amountBefore) amountAfter = amountBefore;
-  if (!amountBefore && amountAfter) amountBefore = amountAfter + discount;
-  if (!discount) { amountBefore = amountAfter || amountBefore; amountAfter = amountBefore; }
-  else amountAfter = Math.max(amountBefore - discount, 0);
+  const explicitDiscount = toNumber(raw.discount);
+  let amountBefore = toNumber(raw.amountBefore);
+  let amountAfter = toNumber(raw.amountAfter);
+  let discount = explicitDiscount > 0 ? explicitDiscount : 0;
+
+  if (!amountBefore && amountAfter && discount) {
+    amountBefore = amountAfter + discount;
+  }
+
+  if (!amountAfter && amountBefore && discount <= amountBefore) {
+    amountAfter = amountBefore - discount;
+  }
+
+  if (!amountAfter && amountBefore) {
+    amountAfter = amountBefore;
+  }
+
+  if (!amountBefore && amountAfter) {
+    amountBefore = amountAfter + discount;
+  }
+
+  if (!discount) {
+    amountBefore = amountAfter || amountBefore;
+    amountAfter = amountBefore;
+  } else {
+    amountAfter = Math.max(amountBefore - discount, 0);
+  }
+
   let taxAmount = toNumber(raw.taxAmount);
-  const taxRate = toNumber(raw.taxRate), taxIncluded = Boolean(raw.taxIncluded), hasExplicit = taxAmount > 0;
-  if (!hasExplicit || (!taxAmount && taxRate && amountAfter)) taxAmount = computeTaxAmount({ amountAfter, taxRate, taxIncluded });
+  const taxRate = toNumber(raw.taxRate);
+  const taxIncluded = Boolean(raw.taxIncluded);
+  const hasExplicitTaxAmount = taxAmount > 0;
+
+  if (!hasExplicitTaxAmount || (!taxAmount && taxRate && amountAfter)) {
+    taxAmount = computeTaxAmount({
+      amountAfter,
+      taxRate,
+      taxIncluded,
+    });
+  }
+
   return createItem({
-    name: asText(raw.name), activeIngredient: asText(raw.activeIngredient), uses: asText(raw.uses),
-    genericOrBrand: normalizeDrugKind(raw.genericOrBrand), category: normalizeCategory(raw.category, raw.name),
-    amountBefore: roundMoney(amountBefore), discount: roundMoney(discount), amountAfter: roundMoney(amountAfter),
-    taxIncluded, taxRate: roundMoney(taxRate), taxAmount: roundMoney(taxAmount),
-    autoTax: !hasExplicit, rawLine: asText(raw.rawLine || raw.name)
+    name: asText(raw.name),
+    activeIngredient: asText(raw.activeIngredient),
+    uses: asText(raw.uses),
+    genericOrBrand: normalizeDrugKind(raw.genericOrBrand),
+    category: normalizeCategory(raw.category, raw.name),
+    amountBefore: roundMoney(amountBefore),
+    discount: roundMoney(discount),
+    amountAfter: roundMoney(amountAfter),
+    taxIncluded,
+    taxRate: roundMoney(taxRate),
+    taxAmount: roundMoney(taxAmount),
+    autoTax: !hasExplicitTaxAmount,
+    rawLine: asText(raw.rawLine || raw.name),
   });
 }
 
 function parseEditedText() {
   const text = refs.ocrText.value.trim();
-  if (!text) { setStatus("There is no text to parse yet.", "warn"); return; }
-  parseTextIntoState(text); state.confidenceLabel = "Manual";
-  setStatus("Parsed " + state.items.length + " medication " + (state.items.length === 1 ? "row" : "rows") + " from the edited text.", state.items.length ? "success" : "warn");
+
+  if (!text) {
+    setStatus("There is no text to parse yet. Paste text or run AI extraction first.", "warn");
+    return;
+  }
+
+  parseTextIntoState(text);
+  state.confidenceLabel = "Manual";
+
+  const itemWord = state.items.length === 1 ? "row" : "rows";
+  setStatus(
+    `Parsed ${state.items.length} medication ${itemWord} from the edited text. Double-check values before export.`,
+    state.items.length ? "success" : "warn",
+  );
 }
 
 function parseTextIntoState(text) {
   const parsed = parseInvoiceText(text);
-  state.reviewText = text; state.summary = parsed.summary; state.items = parsed.items;
-  refs.ocrText.value = text; syncSummaryInputs(); renderItems(); updateTotals(); updateStats();
+  state.reviewText = text;
+  state.summary = parsed.summary;
+  state.items = parsed.items;
+
+  refs.ocrText.value = text;
+  syncSummaryInputs();
+  renderItems();
+  updateTotals();
+  updateStats();
 }
 
 function parseInvoiceText(text) {
-  const lines = splitLines(text), docTax = detectDocumentTax(text);
-  const summary = { providerName: extractProviderName(lines), invoiceDate: extractInvoiceDate(lines, text), providerType: inferProviderType(text), taxMode: docTax.mode };
-  const seen = new Set(), items = [];
+  const lines = splitLines(text);
+  const docTax = detectDocumentTax(text);
+  const summary = {
+    providerName: extractProviderName(lines),
+    invoiceDate: extractInvoiceDate(lines, text),
+    providerType: inferProviderType(text),
+    taxMode: docTax.mode,
+  };
+
+  const seen = new Set();
+  const items = [];
+
   for (const line of lines) {
-    if (!isLikelyMedicationLine(line)) continue;
+    if (!isLikelyMedicationLine(line)) {
+      continue;
+    }
+
     const item = parseMedicationLine(line, docTax);
-    if (!item) continue;
-    const key = item.name.toLowerCase() + "|" + item.amountBefore + "|" + item.amountAfter + "|" + item.taxAmount;
-    if (seen.has(key)) continue;
-    seen.add(key); items.push(item);
+    if (!item) {
+      continue;
+    }
+
+    const key = `${item.name.toLowerCase()}|${item.amountBefore}|${item.amountAfter}|${item.taxAmount}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    items.push(item);
   }
+
   return { summary, items };
 }
 
-function splitLines(text) { return String(text).replace(/\r/g, "\n").split("\n").map(function(l) { return l.replace(/[|]+/g, " ").replace(/\s+/g, " ").trim(); }).filter(Boolean); }
-function extractProviderName(lines) { const pw = /(hospital|medical|clinic|pharmacy|chemist|laboratory|lab|center|centre)/i, hw = /(invoice|tax invoice|date|time|age|patient|doctor|ref|address|phone|tel|notes|transcription)/i, hl = lines.slice(0, 8); for (const l of hl) { if (pw.test(l) && !hw.test(l)) return l; } return hl.find(function(l) { return /[a-z]/i.test(l) && l.length > 8 && !hw.test(l); }) || ""; }
-function extractInvoiceDate(lines, fullText) { const dp = /\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{4}[./-]\d{1,2}[./-]\d{1,2}\b/g; for (const l of lines) { if (!/\bdate\b/i.test(l)) continue; const m = l.match(dp); if (m) return m[0]; } const am = fullText.match(dp); return am ? am[0] : ""; }
-function inferProviderType(text) { if (/(pharmacy|chemist|drug store|apothec)/i.test(text)) return "pharmacy"; if (/(hospital|clinic|medical center|polyclinic)/i.test(text)) return "hospital"; return "unknown"; }
-function detectDocumentTax(text) { const v = String(text), rm = v.match(/(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i), dr = rm ? parseFlexibleNumber(rm[1] || rm[2]) : 0, inc = /(tax included|vat included|incl.?\s*(?:tax|vat)|inclusive of tax)/i.test(v), exc = /(tax excluded|excluding tax|plus tax|plus vat|before tax)/i.test(v); let mode = "unknown"; if (inc && exc) mode = "mixed"; else if (inc) mode = "included"; else if (exc) mode = "not_included"; return { mode, defaultRate: dr }; }
-function isLikelyMedicationLine(line) { const lower = line.toLowerCase(); if (!line || line.length < 5) return false; if (/(subtotal|grand total|amount due|cash|change|invoice no|bill no|reference|patient|doctor|address|phone|time|age|fax|model notes|model transcription)/i.test(lower)) return false; if (/^(rx|findings?|notes?)$/i.test(lower)) return false; return /[a-z]/i.test(line) && (/\d+\s*[x*]\s*\d+/i.test(line) || (/\d/.test(line) && (/(tab|tablet|cap|capsule|syrup|inj|injection|drop|cream|gel|ointment|vit|supplement|protein|phyto|daily care|lotion|wash|spray|powder|sachet|ampoule|oral)/i.test(lower) || line.split(" ").length >= 2))); }
+function splitLines(text) {
+  return String(text)
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[|]+/g, " ").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+function extractProviderName(lines) {
+  const providerWords = /(hospital|medical|clinic|pharmacy|chemist|laboratory|lab|center|centre|ØµÙŠØ¯Ù„ÙŠØ©|Ù…Ø³ØªØ´ÙÙ‰|Ù…Ø±ÙƒØ²|Ù…Ø³ØªÙˆØµÙ)/i;
+  const headerWords = /(invoice|tax invoice|date|time|age|patient|doctor|ref|reference|address|phone|tel|notes|transcription)/i;
+  const headerLines = lines.slice(0, 8);
+
+  for (const line of headerLines) {
+    if (providerWords.test(line) && !headerWords.test(line)) {
+      return line;
+    }
+  }
+
+  const fallback = headerLines.find(
+    (line) =>
+      /[a-z\u0600-\u06ff]/i.test(line) &&
+      line.length > 8 &&
+      !headerWords.test(line),
+  );
+
+  return fallback || "";
+}
+
+function extractInvoiceDate(lines, fullText) {
+  const datePattern =
+    /\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{4}[./-]\d{1,2}[./-]\d{1,2}\b/g;
+
+  for (const line of lines) {
+    if (!/\bdate\b/i.test(line)) {
+      continue;
+    }
+
+    const match = line.match(datePattern);
+    if (match) {
+      return match[0];
+    }
+  }
+
+  const allMatches = fullText.match(datePattern);
+  return allMatches ? allMatches[0] : "";
+}
+
+function inferProviderType(text) {
+  const combined = String(text).toLowerCase();
+
+  if (/(pharmacy|chemist|drug store|apothec|ØµÙŠØ¯Ù„ÙŠØ©)/i.test(combined)) {
+    return "pharmacy";
+  }
+
+  if (/(hospital|clinic|medical center|medical centre|polyclinic|health center|Ù…Ø³ØªØ´ÙÙ‰|Ø¹ÙŠØ§Ø¯Ø©|Ù…Ø±ÙƒØ²)/i.test(combined)) {
+    return "hospital";
+  }
+
+  return "unknown";
+}
+
+function detectDocumentTax(text) {
+  const value = String(text);
+  const rateMatch = value.match(
+    /(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i,
+  );
+  const defaultRate = rateMatch
+    ? parseFlexibleNumber(rateMatch[1] || rateMatch[2])
+    : 0;
+  const included = /(tax included|vat included|incl\.?\s*(?:tax|vat)|inclusive of tax)/i.test(
+    value,
+  );
+  const excluded = /(tax excluded|excluding tax|plus tax|plus vat|before tax)/i.test(value);
+
+  let mode = "unknown";
+  if (included && excluded) {
+    mode = "mixed";
+  } else if (included) {
+    mode = "included";
+  } else if (excluded) {
+    mode = "not_included";
+  }
+
+  return { mode, defaultRate };
+}
+
+function isLikelyMedicationLine(line) {
+  const lower = line.toLowerCase();
+  const blocked =
+    /(subtotal|grand total|amount due|cash|change|invoice no|bill no|reference|patient|doctor|address|phone|time|age|fax|model notes|model transcription)/i;
+  const medWords =
+    /(tab|tablet|cap|capsule|syrup|syp|inj|injection|drop|cream|gel|ointment|vit|supplement|protein|phyto|daily care|lotion|wash|spray|powder|sachet|ampoule|oral)/i;
+  const hasLetters = /[a-z\u0600-\u06ff]/i.test(line);
+  const hasDigits = /\d/.test(line);
+  const hasMath = /\d+\s*[xÃ—*]\s*\d+/i.test(line);
+
+  if (!line || line.length < 5) {
+    return false;
+  }
+
+  if (blocked.test(lower)) {
+    return false;
+  }
+
+  if (/^(rx|findings?|notes?)$/i.test(lower)) {
+    return false;
+  }
+
+  return hasLetters && (hasMath || (hasDigits && (medWords.test(lower) || line.split(" ").length >= 2)));
+}
 
 function parseMedicationLine(line, docTax) {
-  const mul = extractMultiplication(line), tokens = extractAmountTokens(line, mul);
-  let amountBefore = 0, amountAfter = 0;
-  if (mul) { amountBefore = mul.total; amountAfter = mul.total; const lt = tokens.filter(function(t) { return t.start > mul.end; }); if (lt.length) amountAfter = lt[lt.length - 1].value; }
-  else if (tokens.length >= 2) { amountAfter = tokens[tokens.length - 1].value; amountBefore = tokens[tokens.length - 2].value; if (amountBefore < amountAfter) amountBefore = amountAfter; }
-  else if (tokens.length === 1) { amountBefore = tokens[0].value; amountAfter = tokens[0].value; }
-  if (!amountBefore && amountAfter) amountBefore = amountAfter;
-  if (!amountAfter && amountBefore) amountAfter = amountBefore;
+  const multiplication = extractMultiplication(line);
+  const amountTokens = extractAmountTokens(line, multiplication);
+
+  let amountBefore = 0;
+  let amountAfter = 0;
+
+  if (multiplication) {
+    amountBefore = multiplication.total;
+    amountAfter = multiplication.total;
+
+    const laterTokens = amountTokens.filter((token) => token.start > multiplication.end);
+    if (laterTokens.length) {
+      amountAfter = laterTokens[laterTokens.length - 1].value;
+    }
+  } else if (amountTokens.length >= 2) {
+    amountAfter = amountTokens[amountTokens.length - 1].value;
+    amountBefore = amountTokens[amountTokens.length - 2].value;
+
+    if (amountBefore < amountAfter) {
+      amountBefore = amountAfter;
+    }
+  } else if (amountTokens.length === 1) {
+    amountBefore = amountTokens[0].value;
+    amountAfter = amountTokens[0].value;
+  }
+
+  if (!amountBefore && amountAfter) {
+    amountBefore = amountAfter;
+  }
+
+  if (!amountAfter && amountBefore) {
+    amountAfter = amountBefore;
+  }
+
   const name = extractMedicationName(line);
-  if (!name || (!amountBefore && !amountAfter)) return null;
-  const tax = parseTaxForLine(line, docTax, amountAfter);
-  return createItem({ name, activeIngredient: "", category: detectCategory(name), amountBefore: roundMoney(amountBefore), discount: roundMoney(Math.max(amountBefore - amountAfter, 0)), amountAfter: roundMoney(amountAfter), taxIncluded: tax.included, taxRate: roundMoney(tax.rate), taxAmount: roundMoney(tax.amount), autoTax: !tax.explicitAmount, rawLine: line });
+  if (!name || (!amountBefore && !amountAfter)) {
+    return null;
+  }
+
+  const taxInfo = parseTaxForLine(line, docTax, amountAfter);
+
+  return createItem({
+    name,
+    activeIngredient: "",
+    category: detectCategory(name),
+    amountBefore: roundMoney(amountBefore),
+    discount: roundMoney(Math.max(amountBefore - amountAfter, 0)),
+    amountAfter: roundMoney(amountAfter),
+    taxIncluded: taxInfo.included,
+    taxRate: roundMoney(taxInfo.rate),
+    taxAmount: roundMoney(taxInfo.amount),
+    autoTax: !taxInfo.explicitAmount,
+    rawLine: line,
+  });
 }
 
-function extractMultiplication(line) { const m = line.match(/(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)(?:\s*[=:-]\s*(\d+(?:[.,]\d+)?))?/i); if (!m) return null; const l = parseFlexibleNumber(m[1]), r = parseFlexibleNumber(m[2]); return { start: m.index || 0, end: (m.index || 0) + m[0].length, total: m[3] ? parseFlexibleNumber(m[3]) : roundMoney(l * r) }; }
-function extractAmountTokens(line, mul) { const tokens = []; for (const m of line.matchAll(/\d+(?:[.,]\d+)?/g)) { const raw = m[0], start = m.index || 0, end = start + raw.length, suffix = line.slice(end).trimStart().toLowerCase(), ca = line.slice(end, end + 1); if (mul && start >= mul.start && end <= mul.end) continue; if (ca === "%") continue; if (/^(mg|ml|mcg|g|kg|iu|tabs?|tablets?|caps?|capsules?|pcs?|pack|packs|box|boxes|bottles?|vials?|ampoules?|sachets?)/i.test(suffix)) continue; tokens.push({ raw, value: parseFlexibleNumber(raw), start, end }); } if (tokens.length > 2) return tokens.filter(function(t, i) { const ns = t.start < line.length * 0.35, si = Number.isInteger(t.value) && t.value <= 10; return !(ns && si && i < tokens.length - 2); }); return tokens; }
-function extractMedicationName(line) { const ign = new Set(["tax","vat","gst","discount","disc","less","save","net","amount","price","qty","quantity","subtotal","total","invoice","bill"]); return line.replace(/[=,:;]+/g, " ").split(/\s+/).filter(Boolean).filter(function(t) { const l = t.toLowerCase(); if (ign.has(l)) return false; if (/^\d+(?:[.,]\d+)?$/.test(t)) return false; if (/^[x*=-]+$/i.test(t)) return false; if (/^[a-z]+$/i.test(t)) return true; if (/^\d+(?:mg|ml|mcg|g|kg|iu)$/i.test(l)) return true; return /[a-z]/i.test(t); }).join(" ").replace(/\s+/g, " ").trim(); }
-function detectCategory(name) { const l = String(name).toLowerCase(); if (/(vit|vitamin|supplement|omega|protein|nutrition|food supplement|multivit|zinc|magnesium|calcium|iron|mineral)/i.test(l)) return "vitamin"; if (/(phyto|daily care|care|cream|cleanser|lotion|wash|soap|shampoo|conditioner|toothpaste|cosmetic|hygiene)/i.test(l)) return "daily"; return "medicine"; }
-function parseTaxForLine(line, docTax, amountAfter) { const rm = line.match(/(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i), am = line.match(/(?:vat|gst|tax)[^\d%]{0,8}(\d+(?:[.,]\d+)?)(?!\s*%)/i); const rate = rm ? parseFlexibleNumber(rm[1] || rm[2]) : docTax.defaultRate, ea = am ? parseFlexibleNumber(am[1]) : 0; let inc = false; if (/(tax included|vat included|incl.?\s*(?:tax|vat)|inclusive of tax)/i.test(line)) inc = true; else if (/(tax excluded|excluding tax|plus tax|plus vat|before tax)/i.test(line)) inc = false; else if (docTax.mode === "included") inc = true; return { included: inc, rate, amount: ea || computeTaxAmount({ amountAfter, taxRate: rate, taxIncluded: inc }), explicitAmount: Boolean(ea) }; }
+function extractMultiplication(line) {
+  const match = line.match(
+    /(\d+(?:[.,]\d+)?)\s*[xÃ—*]\s*(\d+(?:[.,]\d+)?)(?:\s*[=:-]\s*(\d+(?:[.,]\d+)?))?/i,
+  );
 
-function syncSummaryInputs() { refs.providerNameInput.value = state.summary.providerName; refs.invoiceDateInput.value = state.summary.invoiceDate; refs.providerTypeInput.value = state.summary.providerType; refs.taxModeInput.value = state.summary.taxMode; }
+  if (!match) {
+    return null;
+  }
+
+  const left = parseFlexibleNumber(match[1]);
+  const right = parseFlexibleNumber(match[2]);
+  const explicitTotal = match[3] ? parseFlexibleNumber(match[3]) : 0;
+
+  return {
+    start: match.index || 0,
+    end: (match.index || 0) + match[0].length,
+    total: explicitTotal || roundMoney(left * right),
+  };
+}
+
+function extractAmountTokens(line, multiplication) {
+  const tokens = [];
+
+  for (const match of line.matchAll(/\d+(?:[.,]\d+)?/g)) {
+    const raw = match[0];
+    const start = match.index || 0;
+    const end = start + raw.length;
+    const suffix = line.slice(end).trimStart().toLowerCase();
+    const charAfter = line.slice(end, end + 1);
+
+    if (multiplication && start >= multiplication.start && end <= multiplication.end) {
+      continue;
+    }
+
+    if (charAfter === "%") {
+      continue;
+    }
+
+    if (/^(mg|ml|mcg|g|kg|iu|tabs?|tablets?|caps?|capsules?|pcs?|pack|packs|box|boxes|bottles?|vials?|ampoules?|sachets?)/i.test(suffix)) {
+      continue;
+    }
+
+    tokens.push({
+      raw,
+      value: parseFlexibleNumber(raw),
+      start,
+      end,
+    });
+  }
+
+  if (tokens.length > 2) {
+    return tokens.filter((token, index) => {
+      const nearStart = token.start < line.length * 0.35;
+      const smallInteger = Number.isInteger(token.value) && token.value <= 10;
+      const looksLikeQty = nearStart && smallInteger && index < tokens.length - 2;
+      return !looksLikeQty;
+    });
+  }
+
+  return tokens;
+}
+
+function extractMedicationName(line) {
+  const ignoredWords = new Set([
+    "tax",
+    "vat",
+    "gst",
+    "discount",
+    "disc",
+    "less",
+    "save",
+    "net",
+    "amount",
+    "price",
+    "qty",
+    "quantity",
+    "subtotal",
+    "total",
+    "invoice",
+    "bill",
+  ]);
+
+  const tokens = line
+    .replace(/[=,:;]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => {
+      const lower = token.toLowerCase();
+
+      if (ignoredWords.has(lower)) {
+        return false;
+      }
+
+      if (/^\d+(?:[.,]\d+)?$/.test(token)) {
+        return false;
+      }
+
+      if (/^\d+[xÃ—*]\d+(?:[=:-]\d+)?$/i.test(token)) {
+        return false;
+      }
+
+      if (/^[xÃ—*=-]+$/i.test(token)) {
+        return false;
+      }
+
+      if (/^[a-z\u0600-\u06ff]+$/i.test(token)) {
+        return true;
+      }
+
+      if (/^\d+(?:mg|ml|mcg|g|kg|iu)$/i.test(lower)) {
+        return true;
+      }
+
+      return /[a-z\u0600-\u06ff]/i.test(token);
+    });
+
+  return tokens.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function detectCategory(name) {
+  const lower = String(name).toLowerCase();
+
+  if (
+    /(vit|vitamin|supplement|omega|protein|nutrition|food supplement|multivit|zinc|magnesium|calcium|iron|mineral)/i.test(
+      lower,
+    )
+  ) {
+    return "vitamin";
+  }
+
+  if (
+    /(phyto|daily care|care|cream|cleanser|lotion|wash|soap|shampoo|conditioner|toothpaste|cosmetic|hygiene)/i.test(
+      lower,
+    )
+  ) {
+    return "daily";
+  }
+
+  return "medicine";
+}
+
+function parseTaxForLine(line, docTax, amountAfter) {
+  const rateMatch = line.match(
+    /(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i,
+  );
+  const amountMatch = line.match(/(?:vat|gst|tax)[^\d%]{0,8}(\d+(?:[.,]\d+)?)(?!\s*%)/i);
+  const rate = rateMatch ? parseFlexibleNumber(rateMatch[1] || rateMatch[2]) : docTax.defaultRate;
+  const explicitAmount = amountMatch ? parseFlexibleNumber(amountMatch[1]) : 0;
+  const includedWords = /(tax included|vat included|incl\.?\s*(?:tax|vat)|inclusive of tax)/i;
+  const excludedWords = /(tax excluded|excluding tax|plus tax|plus vat|before tax)/i;
+
+  let included = false;
+
+  if (includedWords.test(line)) {
+    included = true;
+  } else if (excludedWords.test(line)) {
+    included = false;
+  } else if (docTax.mode === "included") {
+    included = true;
+  }
+
+  return {
+    included,
+    rate,
+    amount: explicitAmount || computeTaxAmount({ amountAfter, taxRate: rate, taxIncluded: included }),
+    explicitAmount: Boolean(explicitAmount),
+  };
+}
+
+function syncSummaryInputs() {
+  refs.providerNameInput.value = state.summary.providerName;
+  refs.invoiceDateInput.value = state.summary.invoiceDate;
+  refs.providerTypeInput.value = state.summary.providerType;
+  refs.taxModeInput.value = state.summary.taxMode;
+}
 
 function renderItems() {
-  if (!state.items.length) { refs.itemsBody.innerHTML = '<tr class="row-medicine"><td colspan="13" class="empty-cell">No medicine rows detected yet. Upload an image, run AI extraction, or add rows manually.</td></tr>'; updateStats(); return; }
-  refs.itemsBody.innerHTML = state.items.map(function(item) {
-    return '<tr class="' + rowClass(item.category) + '" data-id="' + item.id + '">' +
-      '<td><input data-field="name" type="text" value="' + escapeHtml(item.name) + '"/></td>' +
-      '<td><input data-field="activeIngredient" type="text" value="' + escapeHtml(item.activeIngredient) + '"/></td>' +
-      '<td><input data-field="uses" type="text" value="' + escapeHtml(item.uses) + '"/></td>' +
-      '<td><select data-field="genericOrBrand">' + renderDrugKindOptions(item.genericOrBrand) + '</select></td>' +
-      '<td><select data-field="category">' + renderCategoryOptions(item.category) + '</select></td>' +
-      '<td><input data-field="amountBefore" type="number" min="0" step="0.01" value="' + toInputNumber(item.amountBefore) + '"/></td>' +
-      '<td><input data-field="discount" type="number" min="0" step="0.01" value="' + toInputNumber(item.discount) + '"/></td>' +
-      '<td><input data-field="amountAfter" type="number" min="0" step="0.01" value="' + toInputNumber(item.amountAfter) + '"/></td>' +
-      '<td class="checkbox-cell"><label class="checkbox-wrap"><input data-field="taxIncluded" type="checkbox" ' + (item.taxIncluded ? "checked" : "") + '><span>' + (item.taxIncluded ? "Yes" : "No") + '</span></label></td>' +
-      '<td><input data-field="taxRate" type="number" min="0" step="0.01" value="' + toInputNumber(item.taxRate) + '"/></td>' +
-      '<td><input data-field="taxAmount" type="number" min="0" step="0.01" value="' + toInputNumber(item.taxAmount) + '"/></td>' +
-      '<td><input data-field="rawLine" type="text" value="' + escapeHtml(item.rawLine) + '"/></td>' +
-      '<td><button class="row-delete" data-action="delete-row" type="button">Delete</button></td>' +
-      '</tr>';
-  }).join("");
+  if (!state.items.length) {
+    refs.itemsBody.innerHTML = `
+      <tr class="row-medicine">
+        <td colspan="13" class="empty-cell">
+          No medicine rows detected yet. Upload an image, run AI extraction, parse text, or add rows manually.
+        </td>
+      </tr>
+    `;
+    updateStats();
+    return;
+  }
+
+  refs.itemsBody.innerHTML = state.items
+    .map(
+      (item) => `
+        <tr class="${rowClass(item.category)}" data-id="${item.id}">
+          <td>
+            <input data-field="name" type="text" value="${escapeHtml(item.name)}" />
+          </td>
+          <td>
+            <input data-field="activeIngredient" type="text" value="${escapeHtml(item.activeIngredient)}" />
+          </td>
+          <td>
+            <input data-field="uses" type="text" value="${escapeHtml(item.uses)}" />
+          </td>
+          <td>
+            <select data-field="genericOrBrand">
+              ${renderDrugKindOptions(item.genericOrBrand)}
+            </select>
+          </td>
+          <td>
+            <select data-field="category">
+              ${renderCategoryOptions(item.category)}
+            </select>
+          </td>
+          <td>
+            <input data-field="amountBefore" type="number" min="0" step="0.01" value="${toInputNumber(item.amountBefore)}" />
+          </td>
+          <td>
+            <input data-field="discount" type="number" min="0" step="0.01" value="${toInputNumber(item.discount)}" />
+          </td>
+          <td>
+            <input data-field="amountAfter" type="number" min="0" step="0.01" value="${toInputNumber(item.amountAfter)}" />
+          </td>
+          <td class="checkbox-cell">
+            <label class="checkbox-wrap">
+              <input data-field="taxIncluded" type="checkbox" ${item.taxIncluded ? "checked" : ""} />
+              <span>${item.taxIncluded ? "Yes" : "No"}</span>
+            </label>
+          </td>
+          <td>
+            <input data-field="taxRate" type="number" min="0" step="0.01" value="${toInputNumber(item.taxRate)}" />
+          </td>
+          <td>
+            <input data-field="taxAmount" type="number" min="0" step="0.01" value="${toInputNumber(item.taxAmount)}" />
+          </td>
+          <td>
+            <input data-field="rawLine" type="text" value="${escapeHtml(item.rawLine)}" />
+          </td>
+          <td>
+            <button class="row-delete" data-action="delete-row" type="button">Delete</button>
+          </td>
+        </tr>
+      `,
+    )
+    .join("");
 }
-function renderCategoryOptions(s) { return Object.entries(CATEGORY_LABELS).map(function(e) { return '<option value="' + e[0] + '" ' + (e[0] === s ? "selected" : "") + '>' + e[1] + '</option>'; }).join(""); }
-function renderDrugKindOptions(s) { return Object.entries(DRUG_KIND_LABELS).map(function(e) { return '<option value="' + e[0] + '" ' + (e[0] === s ? "selected" : "") + '>' + e[1] + '</option>'; }).join(""); }
+
+function renderCategoryOptions(selected) {
+  return Object.entries(CATEGORY_LABELS)
+    .map(
+      ([value, label]) =>
+        `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`,
+    )
+    .join("");
+}
+
+function renderDrugKindOptions(selected) {
+  return Object.entries(DRUG_KIND_LABELS)
+    .map(
+      ([value, label]) =>
+        `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`,
+    )
+    .join("");
+}
 
 function handleTableInput(event) {
-  const target = event.target, row = target.closest("tr[data-id]"); if (!row) return;
-  const item = state.items.find(function(e) { return e.id === row.dataset.id; }); if (!item || !target.dataset.field) return;
-  const field = target.dataset.field;
-  if (field === "taxIncluded") item.taxIncluded = target.checked;
-  else if (["name","activeIngredient","uses","genericOrBrand","rawLine","category"].includes(field)) item[field] = target.value;
-  else if (field === "amountBefore") { item.amountBefore = roundMoney(parseFlexibleNumber(target.value)); item.amountAfter = roundMoney(Math.max(item.amountBefore - item.discount, 0)); }
-  else if (field === "discount") { item.discount = roundMoney(Math.max(parseFlexibleNumber(target.value), 0)); if (item.amountBefore < item.discount) item.amountBefore = item.discount; item.amountAfter = roundMoney(Math.max(item.amountBefore - item.discount, 0)); }
-  else if (field === "amountAfter") { item.amountAfter = roundMoney(Math.max(parseFlexibleNumber(target.value), 0)); if (item.amountAfter > item.amountBefore) item.amountBefore = item.amountAfter; item.discount = roundMoney(Math.max(item.amountBefore - item.amountAfter, 0)); }
-  else if (field === "taxAmount") { const rv = String(target.value || "").trim(); item.taxAmount = roundMoney(parseFlexibleNumber(rv)); item.autoTax = !rv; }
-  else item[field] = roundMoney(parseFlexibleNumber(target.value));
-  if (["amountBefore","discount","amountAfter","taxRate","taxIncluded"].includes(field) && (item.autoTax || !item.taxAmount)) item.taxAmount = computeTaxAmount(item);
-  updateRenderedRow(row, item); updateTotals(); updateStats();
+  const target = event.target;
+  const row = target.closest("tr[data-id]");
+
+  if (!row) {
+    return;
+  }
+
+  const item = state.items.find((entry) => entry.id === row.dataset.id);
+  if (!item || !target.dataset.field) {
+    return;
+  }
+
+  const { field } = target.dataset;
+
+  if (field === "taxIncluded") {
+    item.taxIncluded = target.checked;
+  } else if (
+    field === "name" ||
+    field === "activeIngredient" ||
+    field === "uses" ||
+    field === "genericOrBrand" ||
+    field === "rawLine" ||
+    field === "category"
+  ) {
+    item[field] = target.value;
+  } else if (field === "amountBefore") {
+    item.amountBefore = roundMoney(parseFlexibleNumber(target.value));
+    item.discount = roundMoney(Math.max(parseFlexibleNumber(item.discount), 0));
+    item.amountAfter = roundMoney(Math.max(item.amountBefore - item.discount, 0));
+  } else if (field === "discount") {
+    item.discount = roundMoney(Math.max(parseFlexibleNumber(target.value), 0));
+    if (item.amountBefore < item.discount) {
+      item.amountBefore = item.discount;
+    }
+    item.amountAfter = roundMoney(Math.max(item.amountBefore - item.discount, 0));
+  } else if (field === "amountAfter") {
+    item.amountAfter = roundMoney(Math.max(parseFlexibleNumber(target.value), 0));
+    if (item.amountAfter > item.amountBefore) {
+      item.amountBefore = item.amountAfter;
+    }
+    item.discount = roundMoney(Math.max(item.amountBefore - item.amountAfter, 0));
+  } else if (field === "taxAmount") {
+    const rawValue = String(target.value || "").trim();
+    item.taxAmount = roundMoney(parseFlexibleNumber(rawValue));
+    item.autoTax = !rawValue;
+  } else {
+    item[field] = roundMoney(parseFlexibleNumber(target.value));
+  }
+
+  if (field === "category") {
+    item.categoryManual = true;
+  }
+
+  if (field === "name" || field === "rawLine" || field === "activeIngredient") {
+    const inferredDrugInfo = lookupDrugInfo(item.name, item.rawLine);
+    if (!item.activeIngredient) {
+      item.activeIngredient = inferredDrugInfo.activeIngredient;
+    }
+    if (!item.uses) {
+      item.uses = inferredDrugInfo.uses || inferDrugUses(`${item.activeIngredient} ${item.name} ${item.rawLine}`);
+    }
+    if (!item.genericOrBrand || item.genericOrBrand === "unknown") {
+      item.genericOrBrand = inferredDrugInfo.genericOrBrand;
+    }
+  }
+
+  if (
+    ["amountBefore", "discount", "amountAfter", "taxRate", "taxIncluded"].includes(field) &&
+    (item.autoTax || !item.taxAmount)
+  ) {
+    item.taxAmount = computeTaxAmount(item);
+  }
+
+  if (field === "taxAmount" && item.autoTax) {
+    item.taxAmount = computeTaxAmount(item);
+  }
+
+  updateRenderedRow(row, item);
+  updateTotals();
+  updateStats();
 }
-function handleTableKeydown(event) { if (event.key !== "Enter") return; const t = event.target; if (!t.dataset.field) return; event.preventDefault(); t.dispatchEvent(new Event("input", { bubbles: true })); t.blur(); }
-function handleTableClick(event) { const btn = event.target.closest("[data-action='delete-row']"); if (!btn) return; const row = btn.closest("tr[data-id]"); if (!row) return; state.items = state.items.filter(function(i) { return i.id !== row.dataset.id; }); renderItems(); updateTotals(); updateStats(); }
+
+function handleTableKeydown(event) {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  if (!target.dataset.field) {
+    return;
+  }
+
+  event.preventDefault();
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+  target.dispatchEvent(new Event("change", { bubbles: true }));
+  target.blur();
+}
+
+function handleTableClick(event) {
+  const button = event.target.closest("[data-action='delete-row']");
+  if (!button) {
+    return;
+  }
+
+  const row = button.closest("tr[data-id]");
+  if (!row) {
+    return;
+  }
+
+  state.items = state.items.filter((item) => item.id !== row.dataset.id);
+  renderItems();
+  updateTotals();
+  updateStats();
+}
 
 function updateRenderedRow(row, item) {
   row.className = rowClass(item.category);
-  const g = function(f) { return row.querySelector("[data-field='" + f + "']"); };
-  const disc = g("discount"), taxLbl = row.querySelector(".checkbox-wrap span"), taxAmt = g("taxAmount"), after = g("amountAfter"), before = g("amountBefore"), ai = g("activeIngredient"), uses = g("uses"), gob = g("genericOrBrand");
-  if (disc && document.activeElement !== disc) disc.value = toInputNumber(item.discount);
-  if (before && document.activeElement !== before) before.value = toInputNumber(item.amountBefore);
-  if (after && document.activeElement !== after) after.value = toInputNumber(item.amountAfter);
-  if (ai && document.activeElement !== ai) ai.value = item.activeIngredient || "";
-  if (uses && document.activeElement !== uses) uses.value = item.uses || "";
-  if (gob && document.activeElement !== gob) gob.value = item.genericOrBrand || "unknown";
-  if (taxLbl) taxLbl.textContent = item.taxIncluded ? "Yes" : "No";
-  if (taxAmt && document.activeElement !== taxAmt) taxAmt.value = toInputNumber(item.taxAmount);
+
+  const discountInput = row.querySelector("[data-field='discount']");
+  const taxToggleLabel = row.querySelector(".checkbox-wrap span");
+  const taxAmountInput = row.querySelector("[data-field='taxAmount']");
+  const amountAfterInput = row.querySelector("[data-field='amountAfter']");
+  const amountBeforeInput = row.querySelector("[data-field='amountBefore']");
+  const activeIngredientInput = row.querySelector("[data-field='activeIngredient']");
+  const usesInput = row.querySelector("[data-field='uses']");
+  const genericOrBrandSelect = row.querySelector("[data-field='genericOrBrand']");
+
+  if (discountInput && document.activeElement !== discountInput) {
+    discountInput.value = toInputNumber(item.discount);
+  }
+
+  if (amountBeforeInput && document.activeElement !== amountBeforeInput) {
+    amountBeforeInput.value = toInputNumber(item.amountBefore);
+  }
+
+  if (amountAfterInput && document.activeElement !== amountAfterInput) {
+    amountAfterInput.value = toInputNumber(item.amountAfter);
+  }
+
+  if (activeIngredientInput && document.activeElement !== activeIngredientInput) {
+    activeIngredientInput.value = item.activeIngredient || "";
+  }
+
+  if (usesInput && document.activeElement !== usesInput) {
+    usesInput.value = item.uses || "";
+  }
+
+  if (genericOrBrandSelect && document.activeElement !== genericOrBrandSelect) {
+    genericOrBrandSelect.value = item.genericOrBrand || "unknown";
+  }
+
+  if (taxToggleLabel) {
+    taxToggleLabel.textContent = item.taxIncluded ? "Yes" : "No";
+  }
+
+  if (taxAmountInput && document.activeElement !== taxAmountInput) {
+    taxAmountInput.value = toInputNumber(item.taxAmount);
+  }
 }
 
-function addManualRow() { state.items.push(createItem()); renderItems(); updateTotals(); updateStats(); setStatus("A blank medication row was added.", "info"); }
+function addManualRow() {
+  state.items.push(createItem());
+  renderItems();
+  updateTotals();
+  updateStats();
+  setStatus("A blank medication row was added. Fill in the values you need.", "info");
+}
 
-async function fillDrugDetails(options) {
-  options = options || {};
-  const unresolved = state.items.filter(function(i) { return i.name && (i.category === "medicine" || i.category === "vitamin") && (!i.activeIngredient || i.genericOrBrand === "unknown"); });
-  if (!unresolved.length) { if (!options.silent) setStatus("All rows already have drug details filled.", "info"); return; }
-  setButtonsDisabled(true); if (!options.silent) setStatus("Filling drug details...", "info");
+async function fillDrugDetails(options = {}) {
+  const unresolvedItems = state.items.filter(
+    (item) =>
+      item.name &&
+      (item.category === "medicine" || item.category === "vitamin") &&
+      (!item.activeIngredient || item.genericOrBrand === "unknown"),
+  );
+
+  if (!unresolvedItems.length) {
+    if (!options.silent) {
+      setStatus("All visible rows already have drug details filled.", "info");
+    }
+    return;
+  }
+
+  if (window.location.protocol === "file:") {
+    if (!options.silent) {
+      setStatus("This page must run from http://localhost:3000, not directly from the file system.", "warn");
+    }
+    return;
+  }
+
+  const sessionApiKey = refs.sessionApiKey.value.trim();
+  setButtonsDisabled(true);
+  if (!options.silent) {
+    setStatus("Filling active ingredients and brand/generic details...", "info");
+  }
+
   try {
     const response = await fetch("/api/enrich-drug-details", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionApiKey: refs.sessionApiKey.value.trim(), items: unresolved.map(function(i) { return { name: i.name, rawLine: i.rawLine, category: i.category, activeIngredient: i.activeIngredient, genericOrBrand: i.genericOrBrand }; }) })
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sessionApiKey,
+        items: unresolvedItems.map((item) => ({
+          name: item.name,
+          rawLine: item.rawLine,
+          category: item.category,
+          activeIngredient: item.activeIngredient,
+          genericOrBrand: item.genericOrBrand,
+        })),
+      }),
     });
+
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Drug detail enrichment failed.");
-    const byKey = new Map((payload.items || []).map(function(i) { return [normalizeDrugKey(i.name), i]; }));
-    for (const row of state.items) { const e = byKey.get(normalizeDrugKey(row.name)); if (!e) continue; if (!row.activeIngredient && e.activeIngredient) row.activeIngredient = e.activeIngredient; if ((!row.genericOrBrand || row.genericOrBrand === "unknown") && e.genericOrBrand) row.genericOrBrand = normalizeDrugKind(e.genericOrBrand); }
-    renderItems(); updateTotals(); updateStats(); if (!options.silent) setStatus("Drug details updated.", "success");
+    if (!response.ok) {
+      throw new Error(payload.error || "Drug detail enrichment failed.");
+    }
+
+    const byKey = new Map(
+      (payload.items || []).map((item) => [normalizeDrugKey(item.name), item]),
+    );
+
+    for (const row of state.items) {
+      const enriched = byKey.get(normalizeDrugKey(row.name));
+      if (!enriched) {
+        continue;
+      }
+
+      if (!row.activeIngredient && enriched.activeIngredient) {
+        row.activeIngredient = enriched.activeIngredient;
+      }
+
+      if ((!row.genericOrBrand || row.genericOrBrand === "unknown") && enriched.genericOrBrand) {
+        row.genericOrBrand = normalizeDrugKind(enriched.genericOrBrand);
+      }
+    }
+
+    renderItems();
+    updateTotals();
+    updateStats();
+
+    if (!options.silent) {
+      setStatus("Drug details updated.", "success");
+    }
   } catch (error) {
-    console.error(error); if (!options.silent) setStatus(error instanceof Error ? error.message : "Drug detail enrichment failed.", "warn");
-  } finally { setButtonsDisabled(false); }
+    console.error(error);
+    if (!options.silent) {
+      setStatus(
+        error instanceof Error ? error.message : "Drug detail enrichment failed.",
+        "warn",
+      );
+    }
+  } finally {
+    setButtonsDisabled(false);
+  }
 }
 
 function calculateTotals() {
-  const t = state.items.reduce(function(a, i) { a.before += i.amountBefore || 0; a.after += i.amountAfter || 0; a.discount += getDiscount(i); a.tax += i.taxAmount || 0; return a; }, { before: 0, discount: 0, after: 0, tax: 0 });
-  t.before = roundMoney(t.before); t.discount = roundMoney(t.discount); t.after = roundMoney(t.after); t.tax = roundMoney(t.tax); t.final = roundMoney(t.after + t.tax); return t;
+  const totals = state.items.reduce(
+    (accumulator, item) => {
+      accumulator.before += item.amountBefore || 0;
+      accumulator.after += item.amountAfter || 0;
+      accumulator.discount += getDiscount(item);
+      accumulator.tax += item.taxAmount || 0;
+      return accumulator;
+    },
+    { before: 0, discount: 0, after: 0, tax: 0 },
+  );
+
+  totals.before = roundMoney(totals.before);
+  totals.discount = roundMoney(totals.discount);
+  totals.after = roundMoney(totals.after);
+  totals.tax = roundMoney(totals.tax);
+  totals.final = roundMoney(totals.after + totals.tax);
+
+  return totals;
 }
+
 function updateTotals() {
-  const t = calculateTotals();
-  refs.totalBefore.textContent = formatMoney(t.before); refs.totalDiscount.textContent = formatMoney(t.discount); refs.totalAfter.textContent = formatMoney(t.after); refs.totalTax.textContent = formatMoney(t.tax);
-  refs.summaryBefore.textContent = formatMoney(t.before); refs.summaryDiscount.textContent = formatMoney(t.discount); refs.summaryAfter.textContent = formatMoney(t.after); refs.summaryTax.textContent = formatMoney(t.tax);
-  refs.summaryFinal.textContent = formatMoney(t.final); refs.summaryFinalFormula.textContent = formatMoney(t.after) + " + " + formatMoney(t.tax) + " tax";
-  if (refs.tableFinal) refs.tableFinal.textContent = formatMoney(t.final);
-  if (refs.tableFinalFormula) refs.tableFinalFormula.textContent = formatMoney(t.after) + " + " + formatMoney(t.tax) + " tax";
+  const totals = calculateTotals();
+
+  refs.totalBefore.textContent = formatMoney(totals.before);
+  refs.totalDiscount.textContent = formatMoney(totals.discount);
+  refs.totalAfter.textContent = formatMoney(totals.after);
+  refs.totalTax.textContent = formatMoney(totals.tax);
+  refs.summaryBefore.textContent = formatMoney(totals.before);
+  refs.summaryDiscount.textContent = formatMoney(totals.discount);
+  refs.summaryAfter.textContent = formatMoney(totals.after);
+  refs.summaryTax.textContent = formatMoney(totals.tax);
+  refs.summaryFinal.textContent = formatMoney(totals.final);
+  refs.summaryFinalFormula.textContent = `${formatMoney(totals.after)} + ${formatMoney(totals.tax)} tax`;
+  if (refs.tableFinal) {
+    refs.tableFinal.textContent = formatMoney(totals.final);
+  }
+  if (refs.tableFinalFormula) {
+    refs.tableFinalFormula.textContent = `${formatMoney(totals.after)} + ${formatMoney(totals.tax)} tax`;
+  }
 }
-function updateStats() { refs.itemCount.textContent = String(state.items.length); refs.ocrConfidence.textContent = state.confidenceLabel || "-"; }
+
+function updateStats() {
+  refs.itemCount.textContent = String(state.items.length);
+  refs.ocrConfidence.textContent = state.confidenceLabel || "-";
+}
 
 function exportSheet() {
-  if (!state.items.length) { setStatus("There are no medication rows to export yet.", "warn"); return; }
-  const t = calculateTotals();
+  if (!state.items.length) {
+    setStatus("There are no medication rows to export yet.", "warn");
+    return;
+  }
+
+  const totals = calculateTotals();
   const rows = [
     ["Provider name", state.summary.providerName],
     ["Invoice date", state.summary.invoiceDate],
     ["Provider type", PROVIDER_TYPE_LABELS[state.summary.providerType] || "Unknown"],
     ["Tax mode", TAX_MODE_LABELS[state.summary.taxMode] || "Unknown"],
-    ["Final amount", formatMoney(t.final)],
+    ["Final amount", formatMoney(totals.final)],
+    ["Final formula", `${formatMoney(totals.after)} + ${formatMoney(totals.tax)} tax`],
     [],
-    ["Medication name","Active ingredient","Uses","Brand / Generic","Category","Before discount","Discount","After discount","Tax included","Tax %","Tax amount","Source line"]
-  ].concat(
-    state.items.map(function(i) { return [i.name, i.activeIngredient, i.uses, DRUG_KIND_LABELS[i.genericOrBrand] || "Unknown", CATEGORY_LABELS[i.category], formatMoney(i.amountBefore), formatMoney(getDiscount(i)), formatMoney(i.amountAfter), i.taxIncluded ? "Yes" : "No", i.taxRate ? String(i.taxRate) : "", formatMoney(i.taxAmount), i.rawLine]; })
-  ).concat([
+    [
+      "Medication name",
+      "Active ingredient",
+      "Uses",
+      "Brand / Generic",
+      "Category",
+      "Before discount",
+      "Discount",
+      "After discount",
+      "Tax included",
+      "Tax %",
+      "Tax amount",
+      "Source line",
+    ],
+    ...state.items.map((item) => [
+      item.name,
+      item.activeIngredient,
+      item.uses,
+      DRUG_KIND_LABELS[item.genericOrBrand] || "Unknown",
+      CATEGORY_LABELS[item.category],
+      formatMoney(item.amountBefore),
+      formatMoney(getDiscount(item)),
+      formatMoney(item.amountAfter),
+      item.taxIncluded ? "Yes" : "No",
+      item.taxRate ? String(item.taxRate) : "",
+      formatMoney(item.taxAmount),
+      item.rawLine,
+    ]),
     [],
-    ["Totals","","","","", formatMoney(t.before), formatMoney(t.discount), formatMoney(t.after),"","", formatMoney(t.tax),""]
-  ]);
-  const prov = sanitizeFilename(state.summary.providerName || "invoice"), dp = sanitizeFilename(state.summary.invoiceDate || "sheet");
-  const csv = rows.map(function(r) { return r.map(csvCell).join(","); }).join("\n"), blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = prov + "-" + dp + ".csv"; link.click(); URL.revokeObjectURL(link.href);
-  setStatus("Sheet exported as CSV.", "success");
+    [
+      "Totals",
+      "",
+      "",
+      "",
+      "",
+      formatMoney(totals.before),
+      formatMoney(totals.discount),
+      formatMoney(totals.after),
+      "",
+      "",
+      formatMoney(totals.tax),
+      "",
+    ],
+  ];
+
+  const provider = sanitizeFilename(state.summary.providerName || "invoice");
+  const datePart = sanitizeFilename(state.summary.invoiceDate || "sheet");
+
+  if (window.XLSX) {
+    const workbook = window.XLSX.utils.book_new();
+    const worksheet = window.XLSX.utils.aoa_to_sheet(rows);
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
+    window.XLSX.writeFile(workbook, `${provider}-${datePart}.xlsx`);
+    setStatus("Excel file exported successfully.", "success");
+    return;
+  }
+
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(blob);
+  link.download = `${provider}-${datePart}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+
+  setStatus("Sheet exported as CSV because the Excel library was not available.", "success");
 }
 
 function resetApp() {
-  state.imageName = ""; state.sourceImage = null; state.rotation = 0; state.reviewText = ""; state.confidenceLabel = "-"; state.summary = defaultSummary(); state.items = [];
-  refs.invoiceInput.value = ""; refs.ocrText.value = ""; syncSummaryInputs(); renderPreview(); renderItems(); updateTotals(); updateStats(); setProgress(0);
+  state.imageName = "";
+  state.sourceImage = null;
+  state.rotation = 0;
+  state.reviewText = "";
+  state.confidenceLabel = "-";
+  state.summary = defaultSummary();
+  state.items = [];
+
+  refs.invoiceInput.value = "";
+  refs.ocrText.value = "";
+  syncSummaryInputs();
+  renderPreview();
+  renderItems();
+  updateTotals();
+  updateStats();
+  setProgress(0);
   setStatus("The invoice sheet has been reset.", "info");
 }
 
-function inferDrugUses(v) {
-  const n = normalizeDrugKey(v);
-  const maps = [
-    { p: /\b(insulin glargine|insulin detemir|insulin aspart|toujeo|lantus|levemir|novorapid)\b/, u: "diabetes control" },
-    { p: /\b(empagliflozin|linagliptin|metformin|gliclazide|glimepiride|dapagliflozin|sitagliptin|jardiance|trajenta|janumet|forxiga|glucophage|diamicron)\b/, u: "type 2 diabetes" },
-    { p: /\b(amlodipine|telmisartan|bisoprolol|rhea amlo|telma|concor)\b/, u: "high blood pressure" },
-    { p: /\b(atorvastatin|rosuvastatin|rhea ator|crestor|lipitor)\b/, u: "high cholesterol" },
-    { p: /\b(amoxicillin|clavulanic|augmentin|metronidazole|flagyl)\b/, u: "infection" },
-    { p: /\b(paracetamol|panadol)\b/, u: "pain / fever" },
-    { p: /\b(diclofenac|voltaren)\b/, u: "pain / inflammation" }
+function normalizeProviderType(value) {
+  if (value === "pharmacy" || value === "hospital") {
+    return value;
+  }
+
+  return "unknown";
+}
+
+function normalizeTaxMode(value) {
+  if (value === "included" || value === "not_included" || value === "mixed") {
+    return value;
+  }
+
+  return "unknown";
+}
+
+function normalizeCategory(value, fallbackName = "") {
+  if (value === "medicine" || value === "vitamin" || value === "daily") {
+    return value;
+  }
+
+  return detectCategory(fallbackName || "");
+}
+
+function normalizeDrugKind(value) {
+  if (value === "brand" || value === "generic") {
+    return value;
+  }
+
+  return "unknown";
+}
+
+function asText(value) {
+  return String(value ?? "").trim();
+}
+
+function inferDrugUses(value) {
+  const normalized = normalizeDrugKey(value);
+  const useMappings = [
+    { pattern: /\b(insulin glargine|insulin detemir|insulin aspart|toujeo|lantus|levemir|novorapid)\b/, uses: "diabetes control" },
+    { pattern: /\b(empagliflozin|linagliptin|metformin|gliclazide|glimepiride|dapagliflozin|sitagliptin|vildagliptin|jardiance|trajenta|janumet|galvus met|amaryl|forxiga|glucophage|diamicron)\b/, uses: "type 2 diabetes" },
+    { pattern: /\b(amlodipine|telmisartan|bisoprolol|rhea amlo|telma|concor)\b/, uses: "high blood pressure" },
+    { pattern: /\b(atorvastatin|rosuvastatin|rhea ator|crestor|lipitor)\b/, uses: "high cholesterol" },
+    { pattern: /\b(amoxicillin|clavulanic|augmentin|metronidazole|flagyl)\b/, uses: "infection" },
+    { pattern: /\b(paracetamol|panadol)\b/, uses: "pain / fever" },
+    { pattern: /\b(diclofenac|voltaren)\b/, uses: "pain / inflammation" },
+    { pattern: /\bguaifenesin\b/, uses: "cough / chest congestion" },
   ];
-  for (const m of maps) { if (m.p.test(n)) return m.u; }
+
+  for (const mapping of useMappings) {
+    if (mapping.pattern.test(normalized)) {
+      return mapping.uses;
+    }
+  }
+
   return "";
 }
 
-function lookupDrugInfo(name, rawLine) {
-  rawLine = rawLine || "";
-  const n = normalizeDrugKey(name + " " + rawLine);
-  const maps = [
-    { p: /\btouj/, ai: "insulin glargine", gob: "brand", u: "diabetes control" },
-    { p: /\bjardi/, ai: "empagliflozin", gob: "brand", u: "type 2 diabetes" },
-    { p: /\btrajen/, ai: "linagliptin", gob: "brand", u: "type 2 diabetes" },
-    { p: /\bjanumet/, ai: "sitagliptin + metformin", gob: "brand", u: "type 2 diabetes" },
-    { p: /\bforxiga/, ai: "dapagliflozin", gob: "brand", u: "type 2 diabetes" },
-    { p: /\bglucophage/, ai: "metformin", gob: "brand", u: "type 2 diabetes" },
-    { p: /\bdiamicron/, ai: "gliclazide", gob: "brand", u: "type 2 diabetes" },
-    { p: /\bcrestor/, ai: "rosuvastatin", gob: "brand", u: "high cholesterol" },
-    { p: /\blipitor/, ai: "atorvastatin", gob: "brand", u: "high cholesterol" },
-    { p: /\btelma/, ai: "telmisartan", gob: "brand", u: "high blood pressure" },
-    { p: /\bconcor/, ai: "bisoprolol", gob: "brand", u: "high blood pressure" },
-    { p: /\baugmentin/, ai: "amoxicillin + clavulanic acid", gob: "brand", u: "infection" },
-    { p: /\bpanadol/, ai: "paracetamol", gob: "brand", u: "pain / fever" },
-    { p: /\bvoltaren/, ai: "diclofenac", gob: "brand", u: "pain / inflammation" },
-    { p: /\bflagyl/, ai: "metronidazole", gob: "brand", u: "infection" },
-    { p: /\blantus/, ai: "insulin glargine", gob: "brand", u: "diabetes control" },
-    { p: /\blevemir/, ai: "insulin detemir", gob: "brand", u: "diabetes control" },
-    { p: /\bnovorapid/, ai: "insulin aspart", gob: "brand", u: "diabetes control" },
-    { p: /\bmetformin/, ai: "metformin", gob: "generic", u: "type 2 diabetes" },
-    { p: /\batorvastatin/, ai: "atorvastatin", gob: "generic", u: "high cholesterol" },
-    { p: /\bamlodipine/, ai: "amlodipine", gob: "generic", u: "high blood pressure" }
+function lookupDrugInfo(name, rawLine = "") {
+  const normalized = normalizeDrugKey(`${name} ${rawLine}`);
+  const knownMappings = [
+    { pattern: /\btouj(?:eo|e|ed?)\b/, activeIngredient: "insulin glargine", genericOrBrand: "brand", uses: "diabetes control" },
+    { pattern: /\bjardi(?:ance|an|a)\b/, activeIngredient: "empagliflozin", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\btrajen(?:ta|t)\b/, activeIngredient: "linagliptin", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\bjanumet\b/, activeIngredient: "sitagliptin + metformin", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\bgalvus\s*met\b/, activeIngredient: "vildagliptin + metformin", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\bamaryl\b/, activeIngredient: "glimepiride", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\bforxiga\b/, activeIngredient: "dapagliflozin", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\bglucophage\b/, activeIngredient: "metformin", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\bdiamicron\b/, activeIngredient: "gliclazide", genericOrBrand: "brand", uses: "type 2 diabetes" },
+    { pattern: /\bcrestor\b/, activeIngredient: "rosuvastatin", genericOrBrand: "brand", uses: "high cholesterol" },
+    { pattern: /\blipitor\b/, activeIngredient: "atorvastatin", genericOrBrand: "brand", uses: "high cholesterol" },
+    { pattern: /\brhea\s*amlo\b|\bamlo\b/, activeIngredient: "amlodipine", genericOrBrand: "brand", uses: "high blood pressure" },
+    { pattern: /\brhea\s*ator\b|\bator\b/, activeIngredient: "atorvastatin", genericOrBrand: "brand", uses: "high cholesterol" },
+    { pattern: /\btelma\b/, activeIngredient: "telmisartan", genericOrBrand: "brand", uses: "high blood pressure" },
+    { pattern: /\bconcor\b/, activeIngredient: "bisoprolol", genericOrBrand: "brand", uses: "high blood pressure" },
+    { pattern: /\baugmentin\b/, activeIngredient: "amoxicillin + clavulanic acid", genericOrBrand: "brand", uses: "infection" },
+    { pattern: /\bpanadol\b/, activeIngredient: "paracetamol", genericOrBrand: "brand", uses: "pain / fever" },
+    { pattern: /\bvoltaren\b/, activeIngredient: "diclofenac", genericOrBrand: "brand", uses: "pain / inflammation" },
+    { pattern: /\bflagyl\b/, activeIngredient: "metronidazole", genericOrBrand: "brand", uses: "infection" },
+    { pattern: /\blantus\b/, activeIngredient: "insulin glargine", genericOrBrand: "brand", uses: "diabetes control" },
+    { pattern: /\blevemir\b/, activeIngredient: "insulin detemir", genericOrBrand: "brand", uses: "diabetes control" },
+    { pattern: /\bnovorapid\b/, activeIngredient: "insulin aspart", genericOrBrand: "brand", uses: "diabetes control" },
+    { pattern: /\bmetformin\b/, activeIngredient: "metformin", genericOrBrand: "generic", uses: "type 2 diabetes" },
+    { pattern: /\bempagliflozin\b/, activeIngredient: "empagliflozin", genericOrBrand: "generic", uses: "type 2 diabetes" },
+    { pattern: /\blinagliptin\b/, activeIngredient: "linagliptin", genericOrBrand: "generic", uses: "type 2 diabetes" },
+    { pattern: /\bamlodipine\b/, activeIngredient: "amlodipine", genericOrBrand: "generic", uses: "high blood pressure" },
+    { pattern: /\batorvastatin\b/, activeIngredient: "atorvastatin", genericOrBrand: "generic", uses: "high cholesterol" },
+    { pattern: /\bguaifenesin\b/, activeIngredient: "guaifenesin", genericOrBrand: "generic", uses: "cough / chest congestion" },
   ];
-  for (const m of maps) { if (m.p.test(n)) return { activeIngredient: m.ai, uses: m.u, genericOrBrand: m.gob }; }
-  return { activeIngredient: "", uses: inferDrugUses(n), genericOrBrand: "unknown" };
+
+  for (const mapping of knownMappings) {
+    if (mapping.pattern.test(normalized)) {
+      return {
+        activeIngredient: mapping.activeIngredient,
+        uses: mapping.uses || inferDrugUses(mapping.activeIngredient),
+        genericOrBrand: mapping.genericOrBrand,
+      };
+    }
+  }
+
+  if (/\bpen\b|\bneedle\b|\b31g\b/.test(normalized)) {
+    return {
+      activeIngredient: "",
+      uses: "",
+      genericOrBrand: "unknown",
+    };
+  }
+
+  return {
+    activeIngredient: "",
+    uses: inferDrugUses(normalized),
+    genericOrBrand: "unknown",
+  };
 }
 
-function normalizeDrugKey(v) { return String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim(); }
-function toNumber(v) { return typeof v === "number" ? (Number.isFinite(v) ? v : 0) : parseFlexibleNumber(v); }
-function computeTaxAmount(item) { const rate = parseFlexibleNumber(item.taxRate), amt = parseFlexibleNumber(item.amountAfter); if (!rate || !amt) return 0; return item.taxIncluded ? roundMoney(amt - amt / (1 + rate / 100)) : roundMoney(amt * (rate / 100)); }
-function getDiscount(item) { const e = parseFlexibleNumber(item.discount); if (e) return roundMoney(Math.max(e, 0)); return roundMoney(Math.max((item.amountBefore || 0) - (item.amountAfter || 0), 0)); }
-function rowClass(cat) { if (cat === "vitamin") return "row-vitamin"; if (cat === "daily") return "row-daily"; return "row-medicine"; }
-function setStatus(msg, tone) { refs.statusText.textContent = msg; refs.statusText.className = "status tone-" + tone; }
-function setProgress(v) { refs.progressFill.style.width = Math.max(0, Math.min(100, v)) + "%"; }
-function setButtonsDisabled(d) { ["runOcrBtn","parseTextBtn","rotateLeftBtn","rotateRightBtn","exportBtn","addRowBtn","fillDrugDetailsBtn"].forEach(function(id) { if (refs[id]) refs[id].disabled = d; }); }
-function parseFlexibleNumber(v) { const c = String(v || "").trim().replace(/[^\d,.-]/g, ""); if (!c) return 0; const hc = c.includes(","), hd = c.includes("."); if (hc && hd) { return c.lastIndexOf(".") > c.lastIndexOf(",") ? Number.parseFloat(c.replace(/,/g, "")) || 0 : Number.parseFloat(c.replace(/\./g, "").replace(",", ".")) || 0; } if (hc && c.split(",").pop().length <= 2) return Number.parseFloat(c.replace(",", ".")) || 0; return Number.parseFloat(c.replace(/,/g, "")) || 0; }
-function roundMoney(v) { return Math.round((Number(v) + Number.EPSILON) * 100) / 100; }
-function formatMoney(v) { return roundMoney(v).toFixed(2); }
-function toInputNumber(v) { if (!v) return ""; return String(roundMoney(v)); }
-function csvCell(v) { const t = String(v != null ? v : ""); return '"' + t.replace(/"/g, '""') + '"'; }
-function sanitizeFilename(v) { return String(v).trim().replace(/[^\w-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/, "").toLowerCase(); }
-function escapeHtml(v) { return String(v != null ? v : "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
-function normalizeProviderType(v) { return (v === "pharmacy" || v === "hospital") ? v : "unknown"; }
-function normalizeTaxMode(v) { return (v === "included" || v === "not_included" || v === "mixed") ? v : "unknown"; }
-function normalizeCategory(v, n) { n = n || ""; return (v === "medicine" || v === "vitamin" || v === "daily") ? v : detectCategory(n || ""); }
-function normalizeDrugKind(v) { return (v === "brand" || v === "generic") ? v : "unknown"; }
-function asText(v) { return String(v != null ? v : "").trim(); }
+function normalizeDrugKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function sumBy(field) {
+  return state.items.reduce((total, item) => total + (item[field] || 0), 0);
+}
+
+function toNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  return parseFlexibleNumber(value);
+}
+
+function computeTaxAmount(item) {
+  const rate = parseFlexibleNumber(item.taxRate);
+  const amountAfter = parseFlexibleNumber(item.amountAfter);
+
+  if (!rate || !amountAfter) {
+    return 0;
+  }
+
+  if (item.taxIncluded) {
+    return roundMoney(amountAfter - amountAfter / (1 + rate / 100));
+  }
+
+  return roundMoney(amountAfter * (rate / 100));
+}
+
+function getDiscount(item) {
+  const explicit = parseFlexibleNumber(item.discount);
+  if (explicit) {
+    return roundMoney(Math.max(explicit, 0));
+  }
+
+  return roundMoney(Math.max((item.amountBefore || 0) - (item.amountAfter || 0), 0));
+}
+
+function rowClass(category) {
+  if (category === "vitamin") {
+    return "row-vitamin";
+  }
+
+  if (category === "daily") {
+    return "row-daily";
+  }
+
+  return "row-medicine";
+}
+
+function setStatus(message, tone) {
+  refs.statusText.textContent = message;
+  refs.statusText.className = `status tone-${tone}`;
+}
+
+function setProgress(value) {
+  refs.progressFill.style.width = `${Math.max(0, Math.min(100, value))}%`;
+}
+
+function setButtonsDisabled(disabled) {
+  refs.runOcrBtn.disabled = disabled;
+  refs.parseTextBtn.disabled = disabled;
+  refs.rotateLeftBtn.disabled = disabled;
+  refs.rotateRightBtn.disabled = disabled;
+  refs.exportBtn.disabled = disabled;
+  refs.addRowBtn.disabled = disabled;
+  refs.fillDrugDetailsBtn.disabled = disabled;
+}
+
+function parseFlexibleNumber(value) {
+  const cleaned = String(value || "")
+    .trim()
+    .replace(/[^\d,.-]/g, "");
+
+  if (!cleaned) {
+    return 0;
+  }
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    if (cleaned.lastIndexOf(".") > cleaned.lastIndexOf(",")) {
+      return Number.parseFloat(cleaned.replace(/,/g, "")) || 0;
+    }
+
+    return Number.parseFloat(cleaned.replace(/\./g, "").replace(",", ".")) || 0;
+  }
+
+  if (hasComma && cleaned.split(",").pop().length <= 2) {
+    return Number.parseFloat(cleaned.replace(",", ".")) || 0;
+  }
+
+  return Number.parseFloat(cleaned.replace(/,/g, "")) || 0;
+}
+
+function roundMoney(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function formatMoney(value) {
+  return roundMoney(value).toFixed(2);
+}
+
+function toInputNumber(value) {
+  if (!value) {
+    return "";
+  }
+
+  return String(roundMoney(value));
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function sanitizeFilename(value) {
+  return String(value)
+    .trim()
+    .replace(/[^\w-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+</script>
+    <script>
+const STANDALONE_GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const STANDALONE_INVOICE_PROMPT = `You extract structured data from a medical invoice, pharmacy bill, or handwritten medicine note.
+
+Rules:
+- Return only JSON matching the schema.
+- Provider name must come from the visible header.
+- invoiceDate should be exactly as seen. Use an empty string if unavailable.
+- providerType must be one of: pharmacy, hospital, unknown.
+- Extract one item per billed medicine or medical product.
+- activeIngredient should be filled when it is visible on the document or when the product name clearly maps to a known active ingredient. Leave it empty when ambiguous.
+- uses should be a short phrase describing what the product is used for when clearly visible or safely inferable from a well-known medicine name. Otherwise return an empty string.
+- genericOrBrand must be brand for trade names, generic for visible generic names, or unknown.
+- If the document is handwritten, use only information visible in the image. Do not invent prices.
+- If only one amount is visible for a line item, put that value in amountAfter and also set amountBefore equal to amountAfter with discount 0.
+- Never invent a before-discount amount.
+- discount must be 0 unless a discount is clearly printed for that item.
+- taxIncluded is true only when clearly included, otherwise false.
+- taxRate must be 0 unless a tax percentage is clearly printed for that item.
+- taxAmount must be 0 unless a tax amount is clearly printed for that item.
+- For vitamins, nutrition, minerals, or food supplements use category vitamin.
+- For phyto, daily care, cosmetic, cleanser, lotion, wash, shampoo, or hygiene items use category daily.
+- For normal drugs and medicines use category medicine.
+- Exclude pure doctor notes unless they are tied to priced items.
+- Use empty strings or 0 instead of guessing.`;
+const STANDALONE_DRUG_METADATA_PROMPT = `You map medication brand names or product names to their active ingredients, a short use, and whether the visible name is brand or generic.
+
+Rules:
+- Return only JSON matching the schema.
+- Use the medicine name and raw line to infer the active ingredient when the brand is well known.
+- uses should be a very short phrase like "type 2 diabetes", "high blood pressure", or "pain / fever".
+- Prefer generic drug ingredients such as empagliflozin, linagliptin, atorvastatin, amlodipine, insulin glargine.
+- For combination products, join ingredients with " + ".
+- genericOrBrand must be brand for trade names and generic when the visible name itself is the generic ingredient.
+- For vitamins or supplements, return the main nutrient or supplement content when clear.
+- For daily care or non-drug products with no true active ingredient, return an empty string and unknown.
+- If uncertain, return an empty string and unknown instead of guessing.`;
+const STANDALONE_INVOICE_SCHEMA = {type:"object",properties:{providerName:{type:"string"},invoiceDate:{type:"string"},providerType:{type:"string",enum:["pharmacy","hospital","unknown"]},taxMode:{type:"string",enum:["included","not_included","mixed","unknown"]},rawText:{type:"string"},notes:{type:"string"},items:{type:"array",items:{type:"object",properties:{name:{type:"string"},activeIngredient:{type:"string"},uses:{type:"string"},genericOrBrand:{type:"string",enum:["brand","generic","unknown"]},category:{type:"string",enum:["medicine","vitamin","daily"]},amountBefore:{type:"number"},discount:{type:"number"},amountAfter:{type:"number"},taxIncluded:{type:"boolean"},taxRate:{type:"number"},taxAmount:{type:"number"},rawLine:{type:"string"}},required:["name","activeIngredient","uses","genericOrBrand","category","amountBefore","discount","amountAfter","taxIncluded","taxRate","taxAmount","rawLine"]}}},required:["providerName","invoiceDate","providerType","taxMode","rawText","notes","items"]};
+const STANDALONE_DRUG_METADATA_SCHEMA = {type:"object",properties:{items:{type:"array",items:{type:"object",properties:{name:{type:"string"},activeIngredient:{type:"string"},uses:{type:"string"},genericOrBrand:{type:"string",enum:["brand","generic","unknown"]}},required:["name","activeIngredient","uses","genericOrBrand"]}}},required:["items"]};
+document.addEventListener("DOMContentLoaded", () => {
+  const eyebrow = document.querySelector(".eyebrow");
+  const heroCopy = document.querySelector(".hero-copy");
+  const heroNote = document.querySelector(".hero-note span");
+  const helperCopy = document.querySelector(".helper-copy");
+  if (eyebrow) eyebrow.textContent = "Standalone HTML";
+  if (heroCopy) heroCopy.textContent = "Open this file directly in your browser, enter a Gemini API key, upload an invoice image, and review an Excel-like medicine sheet with provider name, invoice date, provider type, active ingredient, uses, brand or generic, discounts, totals, and tax details.";
+  if (heroNote) heroNote.innerHTML = "Enter your Gemini API key in this page. The image and request go directly from your browser to Gemini; nothing in this file depends on a local server.";
+  if (helperCopy) helperCopy.textContent = "Use a fresh Gemini key and keep it only in this browser tab. This standalone file sends requests directly to Gemini from the page.";
+  if (refs.exportBtn) refs.exportBtn.textContent = "Download CSV";
+  setStatus("Enter a Gemini API key, upload an invoice, then run extraction.", "info");
+});
+async function runAiExtraction() {
+  const apiKey = refs.sessionApiKey.value.trim();
+  if (!apiKey) { setStatus("Enter a Gemini API key before running extraction.", "warn"); return; }
+  if (!state.sourceImage) { setStatus("Upload an invoice image before running AI extraction.", "warn"); return; }
+  setButtonsDisabled(true); setProgress(10); setStatus("Sending the invoice image directly to Gemini...", "info");
+  try {
+    const canvas = buildOrientedCanvas(2200);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    const [prefix, imageBase64] = dataUrl.split(",");
+    const mimeTypeMatch = prefix.match(/data:(.*?);base64/i);
+    const result = await callGeminiStructuredStandalone({ apiKey, prompt: STANDALONE_INVOICE_PROMPT, schema: STANDALONE_INVOICE_SCHEMA, extraParts: [{ inlineData: { mimeType: mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg", data: imageBase64 } }], temperature: 0.1 });
+    setProgress(75); applyAiExtraction(result); setProgress(100);
+    const itemWord = state.items.length === 1 ? "row" : "rows";
+    setStatus(`AI extraction finished. Parsed ${state.items.length} medication ${itemWord}. Review every row before export.`, "success");
+  } catch (error) {
+    console.error(error); setProgress(0); setStatus(error instanceof Error ? error.message : "Gemini extraction failed.", "warn");
+  } finally { setButtonsDisabled(false); updateStats(); }
+}
+async function fillDrugDetails(options = {}) {
+  const apiKey = refs.sessionApiKey.value.trim();
+  if (!apiKey) { if (!options.silent) setStatus("Enter a Gemini API key before filling drug details.", "warn"); return; }
+  const targetItems = state.items.filter((item) => item.name && (item.category === "medicine" || item.category === "vitamin"));
+  if (!targetItems.length) { if (!options.silent) setStatus("There are no medicine rows to enrich yet.", "info"); return; }
+  setButtonsDisabled(true); if (!options.silent) setStatus("Filling active ingredients, uses, and brand/generic details...", "info");
+  try {
+    const result = await callGeminiStructuredStandalone({ apiKey, prompt: `${STANDALONE_DRUG_METADATA_PROMPT}\n\nProducts to map:\n${JSON.stringify(targetItems.map((item) => ({ name: item.name, rawLine: item.rawLine, category: item.category })) )}`, schema: STANDALONE_DRUG_METADATA_SCHEMA, extraParts: [], temperature: 0 });
+    const byKey = new Map((result.items || []).map((item) => [normalizeDrugKey(item.name), item]));
+    for (const row of state.items) {
+      if (!row.name) continue;
+      const local = lookupDrugInfo(row.name, row.rawLine);
+      if (!row.activeIngredient && local.activeIngredient) row.activeIngredient = local.activeIngredient;
+      if (!row.uses && local.uses) row.uses = local.uses;
+      if ((!row.genericOrBrand || row.genericOrBrand === "unknown") && local.genericOrBrand) row.genericOrBrand = local.genericOrBrand;
+      const enriched = byKey.get(normalizeDrugKey(row.name));
+      if (enriched) {
+        if (!row.activeIngredient && enriched.activeIngredient) row.activeIngredient = enriched.activeIngredient;
+        if (!row.uses && enriched.uses) row.uses = enriched.uses;
+        if ((!row.genericOrBrand || row.genericOrBrand === "unknown") && enriched.genericOrBrand) row.genericOrBrand = normalizeDrugKind(enriched.genericOrBrand);
+      }
+      if (!row.uses) row.uses = inferDrugUses(`${row.activeIngredient} ${row.name} ${row.rawLine}`);
+    }
+    renderItems(); updateTotals(); updateStats(); if (!options.silent) setStatus("Drug details updated.", "success");
+  } catch (error) {
+    console.error(error); if (!options.silent) setStatus(error instanceof Error ? error.message : "Drug detail enrichment failed.", "warn");
+  } finally { setButtonsDisabled(false); }
+}
+async function callGeminiStructuredStandalone({ apiKey, prompt, schema, extraParts, temperature }) {
+  const response = await fetch(`${STANDALONE_GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, ...(extraParts || [])] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: schema, temperature } }) });
+  const raw = await response.text(); if (!response.ok) throw new Error(extractGeminiErrorStandalone(raw) || `Gemini request failed with status ${response.status}.`);
+  const payload = parseJsonSafelyStandalone(raw); const candidateText = extractCandidateTextStandalone(payload); if (!candidateText) throw new Error("Gemini returned no structured response.");
+  return parseJsonSafelyStandalone(stripMarkdownFenceStandalone(candidateText));
+}
+function parseJsonSafelyStandalone(value) { try { return JSON.parse(value); } catch { throw new Error("Could not parse JSON returned by Gemini."); } }
+function extractCandidateTextStandalone(payload) { const parts = payload?.candidates?.[0]?.content?.parts; return Array.isArray(parts) ? parts.map((part) => part.text || "").join("").trim() : ""; }
+function extractGeminiErrorStandalone(rawText) { try { const parsed = JSON.parse(rawText); return parsed?.error?.message || ""; } catch { return ""; } }
+function stripMarkdownFenceStandalone(value) { return String(value || "").replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, "").trim(); }
 </script>
 </body>
 </html>
