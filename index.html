@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -41,7 +40,7 @@ h2 { font-size:1.45rem; }
 .control-strip,.action-row { margin-top:16px; }
 .inline-field,.field,.text-block { display:grid; gap:8px; }
 .inline-field span,.field span,.text-block span { font-size:0.9rem; font-weight:700; color:var(--muted); }
-input[type="text"],input[type="number"],select,textarea { width:100%; border:1px solid rgba(74,58,32,0.14); border-radius:16px; background:rgba(255,255,255,0.82); padding:12px 14px; color:var(--ink); font:inherit; transition:border-color 180ms ease,box-shadow 180ms ease; }
+input[type="text"],input[type="number"],input[type="password"],select,textarea { width:100%; border:1px solid rgba(74,58,32,0.14); border-radius:16px; background:rgba(255,255,255,0.82); padding:12px 14px; color:var(--ink); font:inherit; transition:border-color 180ms ease,box-shadow 180ms ease; }
 textarea { min-height:320px; resize:vertical; line-height:1.55; }
 input:focus,select:focus,textarea:focus { outline:none; border-color:rgba(15,118,110,0.58); box-shadow:0 0 0 4px rgba(15,118,110,0.12); }
 .primary-button,.ghost-button { appearance:none; border-radius:999px; padding:12px 18px; font:inherit; font-weight:700; cursor:pointer; transition:transform 180ms ease,background 180ms ease; }
@@ -92,423 +91,537 @@ tbody tr.row-medicine { background:rgba(255,255,255,0.76); }
 <body>
 <div class="page-shell">
 <header class="hero panel">
-<div>
-<p class="eyebrow">Gemini-powered</p>
-<h1>Invoice Medicine Extractor</h1>
-<p class="hero-copy">Upload a hospital or pharmacy invoice image and review an Excel-like medicine sheet with provider name, invoice date, provider type, discounts, totals, and tax details.</p>
-</div>
-<div class="hero-note">
-<strong>Secure key handling.</strong>
-<span>Your Gemini API key is stored securely on the server. You do not need to enter it here.</span>
-</div>
+  <div>
+    <p class="eyebrow">Gemini-powered</p>
+    <h1>Invoice Medicine Extractor</h1>
+    <p class="hero-copy">Upload a hospital or pharmacy invoice image and review an Excel-like medicine sheet with provider name, invoice date, provider type, discounts, totals, and tax details.</p>
+  </div>
+  <div class="hero-note">
+    <strong>Secure key handling.</strong>
+    <span>Your Gemini API key is stored securely on the server. You do not need to enter it here.</span>
+  </div>
 </header>
 
-```
 <main class="workspace">
-<section class="panel upload-panel">
-<div class="panel-head">
-<div><p class="section-kicker">Step 1</p><h2>Upload &amp; Extract</h2></div>
-<label class="file-button">
-<input id="invoiceInput" type="file" accept="image/*" />
-<span>Choose invoice image</span>
-</label>
-</div>
+  <section class="panel upload-panel">
+    <div class="panel-head">
+      <div><p class="section-kicker">Step 1</p><h2>Upload &amp; Extract</h2></div>
+      <label class="file-button">
+        <input id="invoiceInput" type="file" accept="image/*" />
+        <span>Choose invoice image</span>
+      </label>
+    </div>
+    <label class="field">
+      <span>Gemini API key (optional override)</span>
+      <input id="sessionApiKey" type="password" placeholder="Key is configured on server — leave blank" />
+    </label>
+    <p class="helper-copy">Leave the key field blank — the server key will be used automatically.</p>
+    <div class="preview-frame">
+      <canvas id="previewCanvas"></canvas>
+      <div id="emptyPreview" class="empty-preview">
+        <strong>Preview will appear here</strong>
+        <span>Upload a JPG, PNG, or phone photo. Rotate before extraction if the page is sideways.</span>
+      </div>
+    </div>
+    <div class="control-strip">
+      <button id="rotateLeftBtn" class="ghost-button" type="button">Rotate left</button>
+      <button id="rotateRightBtn" class="ghost-button" type="button">Rotate right</button>
+    </div>
+    <div class="action-row">
+      <button id="runOcrBtn" class="primary-button" type="button">Run AI extraction</button>
+      <button id="parseTextBtn" class="ghost-button" type="button">Parse edited text</button>
+      <button id="resetBtn" class="ghost-button" type="button">Reset</button>
+    </div>
+    <div class="progress-track" aria-hidden="true"><span id="progressFill"></span></div>
+    <p id="statusText" class="status tone-info">Upload an invoice image, then click Run AI extraction.</p>
+  </section>
 
-<label class="field">
-<span>Gemini API key (optional override)</span>
-<input id="sessionApiKey" type="password" placeholder="Key is configured on server — leave blank" />
-</label>
-
-<p class="helper-copy">Leave the key field blank — the server key will be used automatically.</p>
-
-<div class="preview-frame">
-<canvas id="previewCanvas"></canvas>
-<div id="emptyPreview" class="empty-preview">
-<strong>Preview will appear here</strong>
-<span>Upload a JPG, PNG, or phone photo. Rotate before extraction if the page is sideways.</span>
-</div>
-</div>
-
-<div class="control-strip">
-<button id="rotateLeftBtn" class="ghost-button" type="button">Rotate left</button>
-<button id="rotateRightBtn" class="ghost-button" type="button">Rotate right</button>
-</div>
-
-<div class="action-row">
-<button id="runOcrBtn" class="primary-button" type="button">Run AI extraction</button>
-<button id="parseTextBtn" class="ghost-button" type="button">Parse edited text</button>
-<button id="resetBtn" class="ghost-button" type="button">Reset</button>
-</div>
-
-<div class="progress-track" aria-hidden="true"><span id="progressFill"></span></div>
-<p id="statusText" class="status tone-info">Upload an invoice image, then click Run AI extraction.</p>
-</section>
-
-<section class="panel analysis-panel">
-<div class="panel-head">
-<div><p class="section-kicker">Step 2</p><h2>AI Review</h2></div>
-<div class="stats-cluster">
-<div class="stat-pill"><span>Detected lines</span><strong id="itemCount">0</strong></div>
-<div class="stat-pill"><span>AI confidence</span><strong id="ocrConfidence">-</strong></div>
-</div>
-</div>
-<label class="text-block">
-<span>Model transcription / pasted text fallback</span>
-<textarea id="ocrText" spellcheck="false" placeholder="Gemini notes or raw text will appear here. You can also paste invoice text manually and click 'Parse edited text'."></textarea>
-</label>
-<div class="tip-card">
-<strong>Extraction hint</strong>
-<span>Gemini returns structured JSON for provider, invoice date, provider type, active ingredients, tax mode, and per-drug amounts. You can manually fix the sheet before export.</span>
-</div>
-</section>
+  <section class="panel analysis-panel">
+    <div class="panel-head">
+      <div><p class="section-kicker">Step 2</p><h2>AI Review</h2></div>
+      <div class="stats-cluster">
+        <div class="stat-pill"><span>Detected lines</span><strong id="itemCount">0</strong></div>
+        <div class="stat-pill"><span>AI confidence</span><strong id="ocrConfidence">-</strong></div>
+      </div>
+    </div>
+    <label class="text-block">
+      <span>Model transcription / pasted text fallback</span>
+      <textarea id="ocrText" spellcheck="false" placeholder="Gemini notes or raw text will appear here. You can also paste invoice text manually and click 'Parse edited text'."></textarea>
+    </label>
+    <div class="tip-card">
+      <strong>Extraction hint</strong>
+      <span>Gemini returns structured JSON for provider, invoice date, provider type, active ingredients, tax mode, and per-drug amounts. You can manually fix the sheet before export.</span>
+    </div>
+  </section>
 </main>
 
 <section class="panel summary-panel">
-<div class="panel-head"><div><p class="section-kicker">Step 3</p><h2>Invoice Summary</h2></div></div>
-<div class="summary-grid">
-<label class="field"><span>Provider name</span><input id="providerNameInput" type="text" placeholder="Detected provider" /></label>
-<label class="field"><span>Invoice date</span><input id="invoiceDateInput" type="text" placeholder="Detected date" /></label>
-<label class="field"><span>Provider type</span>
-<select id="providerTypeInput">
-<option value="unknown">Unknown</option>
-<option value="pharmacy">Pharmacy</option>
-<option value="hospital">Hospital</option>
-</select>
-</label>
-<label class="field"><span>Tax mode</span>
-<select id="taxModeInput">
-<option value="unknown">Unknown</option>
-<option value="included">Tax included</option>
-<option value="not_included">Tax not included</option>
-<option value="mixed">Mixed</option>
-</select>
-</label>
-</div>
+  <div class="panel-head"><div><p class="section-kicker">Step 3</p><h2>Invoice Summary</h2></div></div>
+  <div class="summary-grid">
+    <label class="field"><span>Provider name</span><input id="providerNameInput" type="text" placeholder="Detected provider" /></label>
+    <label class="field"><span>Invoice date</span><input id="invoiceDateInput" type="text" placeholder="Detected date" /></label>
+    <label class="field"><span>Provider type</span>
+      <select id="providerTypeInput">
+        <option value="unknown">Unknown</option>
+        <option value="pharmacy">Pharmacy</option>
+        <option value="hospital">Hospital</option>
+      </select>
+    </label>
+    <label class="field"><span>Tax mode</span>
+      <select id="taxModeInput">
+        <option value="unknown">Unknown</option>
+        <option value="included">Tax included</option>
+        <option value="not_included">Tax not included</option>
+        <option value="mixed">Mixed</option>
+      </select>
+    </label>
+  </div>
 </section>
 
 <section class="panel table-panel">
-<div class="panel-head">
-<div><p class="section-kicker">Step 4</p><h2>Medication Sheet</h2></div>
-<div class="table-actions">
-<button id="addRowBtn" class="ghost-button" type="button">Add row</button>
-<button id="fillDrugDetailsBtn" class="ghost-button" type="button">Fill drug details</button>
-<button id="exportBtn" class="primary-button" type="button">Download CSV</button>
-</div>
-</div>
-<div class="legend">
-<span><i class="legend-swatch danger"></i> Vitamin / food supplement</span>
-<span><i class="legend-swatch warning"></i> Phyto / daily care</span>
-<span><i class="legend-swatch neutral"></i> Regular medicine</span>
-</div>
-<div class="table-summary">
-<div class="summary-card"><span>Before discount</span><strong id="summaryBefore">0.00</strong></div>
-<div class="summary-card"><span>Discount</span><strong id="summaryDiscount">0.00</strong></div>
-<div class="summary-card"><span>After discount</span><strong id="summaryAfter">0.00</strong></div>
-<div class="summary-card"><span>Total tax</span><strong id="summaryTax">0.00</strong></div>
-<div class="summary-card final-card"><span>Final amount</span><strong id="summaryFinal">0.00</strong><em id="summaryFinalFormula">0.00 + 0.00 tax</em></div>
-</div>
-<div class="table-wrap">
-<table>
-<colgroup>
-<col class="col-name"/><col class="col-ingredient"/><col class="col-uses"/><col class="col-kind"/><col class="col-category"/>
-<col class="col-money"/><col class="col-money"/><col class="col-money"/><col class="col-tax-toggle"/><col class="col-tax-rate"/><col class="col-tax-amount"/><col class="col-source"/><col class="col-remove"/>
-</colgroup>
-<thead>
-<tr>
-<th>Medication name</th><th>Active ingredient</th><th>Uses</th><th>Brand / Generic</th><th>Category</th>
-<th>Before discount</th><th>Discount</th><th>After discount</th><th>Tax included</th><th>Tax %</th><th>Tax amount</th><th>Source line</th><th>Remove</th>
-</tr>
-</thead>
-<tbody id="itemsBody"></tbody>
-<tfoot>
-<tr>
-<td colspan="5">Totals</td>
-<td id="totalBefore">0.00</td><td id="totalDiscount">0.00</td><td id="totalAfter">0.00</td>
-<td>-</td><td>-</td><td id="totalTax">0.00</td>
-<td colspan="2"><div class="tfoot-final"><span>Final amount</span><strong id="tableFinal">0.00</strong><small id="tableFinalFormula">0.00 + 0.00 tax</small></div></td>
-</tr>
-</tfoot>
-</table>
-</div>
+  <div class="panel-head">
+    <div><p class="section-kicker">Step 4</p><h2>Medication Sheet</h2></div>
+    <div class="table-actions">
+      <button id="addRowBtn" class="ghost-button" type="button">Add row</button>
+      <button id="fillDrugDetailsBtn" class="ghost-button" type="button">Fill drug details</button>
+      <button id="exportBtn" class="primary-button" type="button">Download CSV</button>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i class="legend-swatch danger"></i> Vitamin / food supplement</span>
+    <span><i class="legend-swatch warning"></i> Phyto / daily care</span>
+    <span><i class="legend-swatch neutral"></i> Regular medicine</span>
+  </div>
+  <div class="table-summary">
+    <div class="summary-card"><span>Before discount</span><strong id="summaryBefore">0.00</strong></div>
+    <div class="summary-card"><span>Discount</span><strong id="summaryDiscount">0.00</strong></div>
+    <div class="summary-card"><span>After discount</span><strong id="summaryAfter">0.00</strong></div>
+    <div class="summary-card"><span>Total tax</span><strong id="summaryTax">0.00</strong></div>
+    <div class="summary-card final-card"><span>Final amount</span><strong id="summaryFinal">0.00</strong><em id="summaryFinalFormula">0.00 + 0.00 tax</em></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <colgroup>
+        <col class="col-name"/><col class="col-ingredient"/><col class="col-uses"/><col class="col-kind"/><col class="col-category"/>
+        <col class="col-money"/><col class="col-money"/><col class="col-money"/><col class="col-tax-toggle"/><col class="col-tax-rate"/><col class="col-tax-amount"/><col class="col-source"/><col class="col-remove"/>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Medication name</th><th>Active ingredient</th><th>Uses</th><th>Brand / Generic</th><th>Category</th>
+          <th>Before discount</th><th>Discount</th><th>After discount</th><th>Tax included</th><th>Tax %</th><th>Tax amount</th><th>Source line</th><th>Remove</th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5">Totals</td>
+          <td id="totalBefore">0.00</td><td id="totalDiscount">0.00</td><td id="totalAfter">0.00</td>
+          <td>-</td><td>-</td><td id="totalTax">0.00</td>
+          <td colspan="2"><div class="tfoot-final"><span>Final amount</span><strong id="tableFinal">0.00</strong><small id="tableFinalFormula">0.00 + 0.00 tax</small></div></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 </section>
 </div>
 
 <script>
-```
+const CATEGORY_LABELS = { medicine: "Medicine", vitamin: "Vitamin / Food supplement", daily: "Phyto / Daily care" };
+const PROVIDER_TYPE_LABELS = { unknown: "Unknown", pharmacy: "Pharmacy", hospital: "Hospital" };
+const TAX_MODE_LABELS = { unknown: "Unknown", included: "Tax included", not_included: "Tax not included", mixed: "Mixed" };
+const DRUG_KIND_LABELS = { brand: "Brand", generic: "Generic", unknown: "Unknown" };
 
-const CATEGORY_LABELS={medicine:“Medicine”,vitamin:“Vitamin / Food supplement”,daily:“Phyto / Daily care”};
-const PROVIDER_TYPE_LABELS={unknown:“Unknown”,pharmacy:“Pharmacy”,hospital:“Hospital”};
-const TAX_MODE_LABELS={unknown:“Unknown”,included:“Tax included”,not_included:“Tax not included”,mixed:“Mixed”};
-const DRUG_KIND_LABELS={brand:“Brand”,generic:“Generic”,unknown:“Unknown”};
-let itemCounter=0;
-const state={imageName:””,sourceImage:null,rotation:0,reviewText:””,confidenceLabel:”-”,summary:defaultSummary(),items:[]};
-const refs={};
+let itemCounter = 0;
+const state = { imageName: "", sourceImage: null, rotation: 0, reviewText: "", confidenceLabel: "-", summary: defaultSummary(), items: [] };
+const refs = {};
 
-document.addEventListener(“DOMContentLoaded”,()=>{
-[“invoiceInput”,“sessionApiKey”,“previewCanvas”,“emptyPreview”,“runOcrBtn”,“parseTextBtn”,“rotateLeftBtn”,“rotateRightBtn”,“resetBtn”,“statusText”,“progressFill”,“ocrText”,“providerNameInput”,“invoiceDateInput”,“providerTypeInput”,“taxModeInput”,“itemCount”,“ocrConfidence”,“itemsBody”,“totalBefore”,“totalDiscount”,“totalAfter”,“totalTax”,“summaryBefore”,“summaryDiscount”,“summaryAfter”,“summaryTax”,“summaryFinal”,“summaryFinalFormula”,“tableFinal”,“tableFinalFormula”,“addRowBtn”,“fillDrugDetailsBtn”,“exportBtn”].forEach(id=>{refs[id]=document.querySelector(”#”+id);});
-bindEvents();syncSummaryInputs();renderPreview();renderItems();updateTotals();updateStats();
-setStatus(“Upload an invoice image, then click Run AI extraction.”,“info”);
+document.addEventListener("DOMContentLoaded", () => {
+  ["invoiceInput","sessionApiKey","previewCanvas","emptyPreview","runOcrBtn","parseTextBtn","rotateLeftBtn","rotateRightBtn","resetBtn","statusText","progressFill","ocrText","providerNameInput","invoiceDateInput","providerTypeInput","taxModeInput","itemCount","ocrConfidence","itemsBody","totalBefore","totalDiscount","totalAfter","totalTax","summaryBefore","summaryDiscount","summaryAfter","summaryTax","summaryFinal","summaryFinalFormula","tableFinal","tableFinalFormula","addRowBtn","fillDrugDetailsBtn","exportBtn"].forEach(id => { refs[id] = document.querySelector("#" + id); });
+  bindEvents(); syncSummaryInputs(); renderPreview(); renderItems(); updateTotals(); updateStats();
+  setStatus("Upload an invoice image, then click Run AI extraction.", "info");
 });
 
-function bindEvents(){
-refs.invoiceInput.addEventListener(“change”,handleFileSelection);
-refs.rotateLeftBtn.addEventListener(“click”,()=>rotatePreview(-90));
-refs.rotateRightBtn.addEventListener(“click”,()=>rotatePreview(90));
-refs.runOcrBtn.addEventListener(“click”,runAiExtraction);
-refs.parseTextBtn.addEventListener(“click”,parseEditedText);
-refs.resetBtn.addEventListener(“click”,resetApp);
-refs.addRowBtn.addEventListener(“click”,addManualRow);
-refs.fillDrugDetailsBtn.addEventListener(“click”,fillDrugDetails);
-refs.exportBtn.addEventListener(“click”,exportSheet);
-refs.providerNameInput.addEventListener(“input”,()=>{state.summary.providerName=refs.providerNameInput.value.trim();});
-refs.invoiceDateInput.addEventListener(“input”,()=>{state.summary.invoiceDate=refs.invoiceDateInput.value.trim();});
-refs.providerTypeInput.addEventListener(“change”,()=>{state.summary.providerType=refs.providerTypeInput.value;});
-refs.taxModeInput.addEventListener(“change”,()=>{state.summary.taxMode=refs.taxModeInput.value;});
-refs.itemsBody.addEventListener(“input”,handleTableInput);
-refs.itemsBody.addEventListener(“change”,handleTableInput);
-refs.itemsBody.addEventListener(“keydown”,handleTableKeydown);
-refs.itemsBody.addEventListener(“click”,handleTableClick);
+function bindEvents() {
+  refs.invoiceInput.addEventListener("change", handleFileSelection);
+  refs.rotateLeftBtn.addEventListener("click", () => rotatePreview(-90));
+  refs.rotateRightBtn.addEventListener("click", () => rotatePreview(90));
+  refs.runOcrBtn.addEventListener("click", runAiExtraction);
+  refs.parseTextBtn.addEventListener("click", parseEditedText);
+  refs.resetBtn.addEventListener("click", resetApp);
+  refs.addRowBtn.addEventListener("click", addManualRow);
+  refs.fillDrugDetailsBtn.addEventListener("click", fillDrugDetails);
+  refs.exportBtn.addEventListener("click", exportSheet);
+  refs.providerNameInput.addEventListener("input", () => { state.summary.providerName = refs.providerNameInput.value.trim(); });
+  refs.invoiceDateInput.addEventListener("input", () => { state.summary.invoiceDate = refs.invoiceDateInput.value.trim(); });
+  refs.providerTypeInput.addEventListener("change", () => { state.summary.providerType = refs.providerTypeInput.value; });
+  refs.taxModeInput.addEventListener("change", () => { state.summary.taxMode = refs.taxModeInput.value; });
+  refs.itemsBody.addEventListener("input", handleTableInput);
+  refs.itemsBody.addEventListener("change", handleTableInput);
+  refs.itemsBody.addEventListener("keydown", handleTableKeydown);
+  refs.itemsBody.addEventListener("click", handleTableClick);
 }
 
-function defaultSummary(){return{providerName:””,invoiceDate:””,providerType:“unknown”,taxMode:“unknown”};}
-function nextItemId(){itemCounter+=1;return`item-${itemCounter}`;}
+function defaultSummary() { return { providerName: "", invoiceDate: "", providerType: "unknown", taxMode: "unknown" }; }
+function nextItemId() { itemCounter += 1; return "item-" + itemCounter; }
 
-function createItem(partial={}){
-const item={id:nextItemId(),name:””,activeIngredient:””,uses:””,genericOrBrand:“unknown”,category:“medicine”,amountBefore:0,discount:0,amountAfter:0,taxIncluded:false,taxRate:0,taxAmount:0,autoTax:true,rawLine:””,…partial};
-const d=lookupDrugInfo(item.name,item.rawLine);
-if(!item.activeIngredient)item.activeIngredient=d.activeIngredient;
-if(!item.uses)item.uses=d.uses||inferDrugUses(`${item.activeIngredient} ${item.name} ${item.rawLine}`);
-if(!item.genericOrBrand||item.genericOrBrand===“unknown”)item.genericOrBrand=d.genericOrBrand;
-if(item.autoTax)item.taxAmount=computeTaxAmount(item);
-return item;
+function createItem(partial) {
+  partial = partial || {};
+  const item = {
+    id: nextItemId(), name: "", activeIngredient: "", uses: "", genericOrBrand: "unknown",
+    category: "medicine", amountBefore: 0, discount: 0, amountAfter: 0,
+    taxIncluded: false, taxRate: 0, taxAmount: 0, autoTax: true, rawLine: ""
+  };
+  // Merge partial — replaces the broken ...partial spread
+  Object.keys(partial).forEach(function(k) { item[k] = partial[k]; });
+
+  const d = lookupDrugInfo(item.name, item.rawLine);
+  if (!item.activeIngredient) item.activeIngredient = d.activeIngredient;
+  if (!item.uses) item.uses = d.uses || inferDrugUses(item.activeIngredient + " " + item.name + " " + item.rawLine);
+  if (!item.genericOrBrand || item.genericOrBrand === "unknown") item.genericOrBrand = d.genericOrBrand;
+  if (item.autoTax) item.taxAmount = computeTaxAmount(item);
+  return item;
 }
 
-function handleFileSelection(event){
-const[file]=event.target.files||[];if(!file)return;
-const reader=new FileReader();
-reader.onload=()=>{const image=new Image();image.onload=()=>{state.sourceImage=image;state.imageName=file.name;state.rotation=0;renderPreview();setStatus(`${file.name} loaded. Rotate if needed, then run AI extraction.`,“success”);};image.src=reader.result;};
-reader.readAsDataURL(file);
+function handleFileSelection(event) {
+  const file = (event.target.files || [])[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function() {
+    const image = new Image();
+    image.onload = function() { state.sourceImage = image; state.imageName = file.name; state.rotation = 0; renderPreview(); setStatus(file.name + " loaded. Rotate if needed, then run AI extraction.", "success"); };
+    image.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
-function rotatePreview(delta){
-if(!state.sourceImage){setStatus(“Upload an invoice image before rotating.”,“warn”);return;}
-state.rotation=(state.rotation+delta+360)%360;renderPreview();
+function rotatePreview(delta) {
+  if (!state.sourceImage) { setStatus("Upload an invoice image before rotating.", "warn"); return; }
+  state.rotation = (state.rotation + delta + 360) % 360;
+  renderPreview();
 }
 
-function renderPreview(){
-const canvas=refs.previewCanvas,empty=refs.emptyPreview;
-if(!state.sourceImage){canvas.style.display=“none”;empty.style.display=“grid”;return;}
-const wc=buildOrientedCanvas(1600),ctx=canvas.getContext(“2d”);
-canvas.width=wc.width;canvas.height=wc.height;ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(wc,0,0);
-canvas.style.display=“block”;empty.style.display=“none”;
+function renderPreview() {
+  const canvas = refs.previewCanvas, empty = refs.emptyPreview;
+  if (!state.sourceImage) { canvas.style.display = "none"; empty.style.display = "grid"; return; }
+  const wc = buildOrientedCanvas(1600), ctx = canvas.getContext("2d");
+  canvas.width = wc.width; canvas.height = wc.height;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(wc, 0, 0);
+  canvas.style.display = "block"; empty.style.display = "none";
 }
 
-function buildOrientedCanvas(maxDimension){
-const img=state.sourceImage,scale=Math.min(1,maxDimension/Math.max(img.width,img.height));
-const sw=Math.round(img.width*scale),sh=Math.round(img.height*scale),r=state.rotation,swap=r===90||r===270;
-const canvas=document.createElement(“canvas”);canvas.width=swap?sh:sw;canvas.height=swap?sw:sh;
-const ctx=canvas.getContext(“2d”);ctx.save();ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(r*Math.PI/180);ctx.drawImage(img,-sw/2,-sh/2,sw,sh);ctx.restore();
-return canvas;
+function buildOrientedCanvas(maxDimension) {
+  const img = state.sourceImage, scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+  const sw = Math.round(img.width * scale), sh = Math.round(img.height * scale), r = state.rotation, swap = r === 90 || r === 270;
+  const canvas = document.createElement("canvas");
+  canvas.width = swap ? sh : sw; canvas.height = swap ? sw : sh;
+  const ctx = canvas.getContext("2d");
+  ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(r * Math.PI / 180);
+  ctx.drawImage(img, -sw / 2, -sh / 2, sw, sh); ctx.restore();
+  return canvas;
 }
 
-async function runAiExtraction(){
-if(!state.sourceImage){setStatus(“Upload an invoice image before running AI extraction.”,“warn”);return;}
-setButtonsDisabled(true);setProgress(10);setStatus(“Sending invoice to Gemini…”,“info”);
-try{
-const canvas=buildOrientedCanvas(2200),dataUrl=canvas.toDataURL(“image/jpeg”,0.92);
-const[prefix,imageBase64]=dataUrl.split(”,”),mimeTypeMatch=prefix.match(/data:(.*?);base64/i);
-const sessionApiKey=refs.sessionApiKey.value.trim();
-const response=await fetch(”/api/extract-invoice”,{method:“POST”,headers:{“Content-Type”:“application/json”},body:JSON.stringify({mimeType:mimeTypeMatch?mimeTypeMatch[1]:“image/jpeg”,imageBase64,fileName:state.imageName,sessionApiKey})});
-setProgress(75);
-let payload;try{payload=await response.json();}catch{throw new Error(“Server returned a non-JSON response.”);}
-if(!response.ok)throw new Error(payload.error||“Gemini extraction failed.”);
-applyAiExtraction(payload.extraction||payload);setProgress(100);
-setStatus(`AI extraction finished. Parsed ${state.items.length} medication ${state.items.length===1?"row":"rows"}. Review every row before export.`,“success”);
-}catch(error){console.error(error);setProgress(0);setStatus(error instanceof Error?error.message:“Gemini extraction failed.”,“warn”);}
-finally{setButtonsDisabled(false);updateStats();}
+async function runAiExtraction() {
+  if (!state.sourceImage) { setStatus("Upload an invoice image before running AI extraction.", "warn"); return; }
+  setButtonsDisabled(true); setProgress(10); setStatus("Sending invoice to Gemini...", "info");
+  try {
+    const canvas = buildOrientedCanvas(2200), dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    const parts = dataUrl.split(","), mimeTypeMatch = parts[0].match(/data:(.*?);base64/i);
+    const imageBase64 = parts[1];
+    const sessionApiKey = refs.sessionApiKey.value.trim();
+    const response = await fetch("/api/extract-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mimeType: mimeTypeMatch ? mimeTypeMatch[1] : "image/jpeg", imageBase64, fileName: state.imageName, sessionApiKey })
+    });
+    setProgress(75);
+    let payload;
+    try { payload = await response.json(); } catch(e) { throw new Error("Server returned a non-JSON response."); }
+    if (!response.ok) throw new Error(payload.error || "Gemini extraction failed.");
+    applyAiExtraction(payload.extraction || payload);
+    setProgress(100);
+    setStatus("AI extraction finished. Parsed " + state.items.length + " medication " + (state.items.length === 1 ? "row" : "rows") + ". Review every row before export.", "success");
+  } catch (error) {
+    console.error(error); setProgress(0); setStatus(error instanceof Error ? error.message : "Gemini extraction failed.", "warn");
+  } finally {
+    setButtonsDisabled(false); updateStats();
+  }
 }
 
-function applyAiExtraction(result){
-state.summary={providerName:asText(result.providerName),invoiceDate:asText(result.invoiceDate),providerType:normalizeProviderType(result.providerType),taxMode:normalizeTaxMode(result.taxMode)};
-state.items=Array.isArray(result.items)?result.items.map(normalizeExtractedItem).filter(i=>i.name):[];
-state.reviewText=result.rawText?`Model transcription:\n${asText(result.rawText)}`:“AI extraction completed.”;
-state.confidenceLabel=result.notes?“Review”:“AI”;
-refs.ocrText.value=state.reviewText;syncSummaryInputs();renderItems();updateTotals();updateStats();
-if(state.items.some(i=>(i.category===“medicine”||i.category===“vitamin”)&&(!i.activeIngredient||!i.uses||i.genericOrBrand===“unknown”)))void fillDrugDetails({silent:true});
+function applyAiExtraction(result) {
+  state.summary = { providerName: asText(result.providerName), invoiceDate: asText(result.invoiceDate), providerType: normalizeProviderType(result.providerType), taxMode: normalizeTaxMode(result.taxMode) };
+  state.items = Array.isArray(result.items) ? result.items.map(normalizeExtractedItem).filter(function(i) { return i.name; }) : [];
+  state.reviewText = result.rawText ? "Model transcription:\n" + asText(result.rawText) : "AI extraction completed.";
+  state.confidenceLabel = result.notes ? "Review" : "AI";
+  refs.ocrText.value = state.reviewText;
+  syncSummaryInputs(); renderItems(); updateTotals(); updateStats();
+  if (state.items.some(function(i) { return (i.category === "medicine" || i.category === "vitamin") && (!i.activeIngredient || !i.uses || i.genericOrBrand === "unknown"); })) {
+    fillDrugDetails({ silent: true });
+  }
 }
 
-function normalizeExtractedItem(raw){
-let amountBefore=toNumber(raw.amountBefore),amountAfter=toNumber(raw.amountAfter),discount=toNumber(raw.discount)>0?toNumber(raw.discount):0;
-if(!amountBefore&&amountAfter&&discount)amountBefore=amountAfter+discount;
-if(!amountAfter&&amountBefore&&discount<=amountBefore)amountAfter=amountBefore-discount;
-if(!amountAfter&&amountBefore)amountAfter=amountBefore;
-if(!amountBefore&&amountAfter)amountBefore=amountAfter+discount;
-if(!discount){amountBefore=amountAfter||amountBefore;amountAfter=amountBefore;}else amountAfter=Math.max(amountBefore-discount,0);
-let taxAmount=toNumber(raw.taxAmount);const taxRate=toNumber(raw.taxRate),taxIncluded=Boolean(raw.taxIncluded),hasExplicit=taxAmount>0;
-if(!hasExplicit||(!taxAmount&&taxRate&&amountAfter))taxAmount=computeTaxAmount({amountAfter,taxRate,taxIncluded});
-return createItem({name:asText(raw.name),activeIngredient:asText(raw.activeIngredient),uses:asText(raw.uses),genericOrBrand:normalizeDrugKind(raw.genericOrBrand),category:normalizeCategory(raw.category,raw.name),amountBefore:roundMoney(amountBefore),discount:roundMoney(discount),amountAfter:roundMoney(amountAfter),taxIncluded,taxRate:roundMoney(taxRate),taxAmount:roundMoney(taxAmount),autoTax:!hasExplicit,rawLine:asText(raw.rawLine||raw.name)});
+function normalizeExtractedItem(raw) {
+  let amountBefore = toNumber(raw.amountBefore), amountAfter = toNumber(raw.amountAfter), discount = toNumber(raw.discount) > 0 ? toNumber(raw.discount) : 0;
+  if (!amountBefore && amountAfter && discount) amountBefore = amountAfter + discount;
+  if (!amountAfter && amountBefore && discount <= amountBefore) amountAfter = amountBefore - discount;
+  if (!amountAfter && amountBefore) amountAfter = amountBefore;
+  if (!amountBefore && amountAfter) amountBefore = amountAfter + discount;
+  if (!discount) { amountBefore = amountAfter || amountBefore; amountAfter = amountBefore; }
+  else amountAfter = Math.max(amountBefore - discount, 0);
+  let taxAmount = toNumber(raw.taxAmount);
+  const taxRate = toNumber(raw.taxRate), taxIncluded = Boolean(raw.taxIncluded), hasExplicit = taxAmount > 0;
+  if (!hasExplicit || (!taxAmount && taxRate && amountAfter)) taxAmount = computeTaxAmount({ amountAfter, taxRate, taxIncluded });
+  return createItem({
+    name: asText(raw.name), activeIngredient: asText(raw.activeIngredient), uses: asText(raw.uses),
+    genericOrBrand: normalizeDrugKind(raw.genericOrBrand), category: normalizeCategory(raw.category, raw.name),
+    amountBefore: roundMoney(amountBefore), discount: roundMoney(discount), amountAfter: roundMoney(amountAfter),
+    taxIncluded, taxRate: roundMoney(taxRate), taxAmount: roundMoney(taxAmount),
+    autoTax: !hasExplicit, rawLine: asText(raw.rawLine || raw.name)
+  });
 }
 
-function parseEditedText(){
-const text=refs.ocrText.value.trim();if(!text){setStatus(“There is no text to parse yet.”,“warn”);return;}
-parseTextIntoState(text);state.confidenceLabel=“Manual”;
-setStatus(`Parsed ${state.items.length} medication ${state.items.length===1?"row":"rows"} from the edited text.`,state.items.length?“success”:“warn”);
+function parseEditedText() {
+  const text = refs.ocrText.value.trim();
+  if (!text) { setStatus("There is no text to parse yet.", "warn"); return; }
+  parseTextIntoState(text); state.confidenceLabel = "Manual";
+  setStatus("Parsed " + state.items.length + " medication " + (state.items.length === 1 ? "row" : "rows") + " from the edited text.", state.items.length ? "success" : "warn");
 }
 
-function parseTextIntoState(text){
-const parsed=parseInvoiceText(text);state.reviewText=text;state.summary=parsed.summary;state.items=parsed.items;
-refs.ocrText.value=text;syncSummaryInputs();renderItems();updateTotals();updateStats();
+function parseTextIntoState(text) {
+  const parsed = parseInvoiceText(text);
+  state.reviewText = text; state.summary = parsed.summary; state.items = parsed.items;
+  refs.ocrText.value = text; syncSummaryInputs(); renderItems(); updateTotals(); updateStats();
 }
 
-function parseInvoiceText(text){
-const lines=splitLines(text),docTax=detectDocumentTax(text);
-const summary={providerName:extractProviderName(lines),invoiceDate:extractInvoiceDate(lines,text),providerType:inferProviderType(text),taxMode:docTax.mode};
-const seen=new Set(),items=[];
-for(const line of lines){if(!isLikelyMedicationLine(line))continue;const item=parseMedicationLine(line,docTax);if(!item)continue;const key=`${item.name.toLowerCase()}|${item.amountBefore}|${item.amountAfter}|${item.taxAmount}`;if(seen.has(key))continue;seen.add(key);items.push(item);}
-return{summary,items};
+function parseInvoiceText(text) {
+  const lines = splitLines(text), docTax = detectDocumentTax(text);
+  const summary = { providerName: extractProviderName(lines), invoiceDate: extractInvoiceDate(lines, text), providerType: inferProviderType(text), taxMode: docTax.mode };
+  const seen = new Set(), items = [];
+  for (const line of lines) {
+    if (!isLikelyMedicationLine(line)) continue;
+    const item = parseMedicationLine(line, docTax);
+    if (!item) continue;
+    const key = item.name.toLowerCase() + "|" + item.amountBefore + "|" + item.amountAfter + "|" + item.taxAmount;
+    if (seen.has(key)) continue;
+    seen.add(key); items.push(item);
+  }
+  return { summary, items };
 }
 
-function splitLines(text){return String(text).replace(/\r/g,”\n”).split(”\n”).map(l=>l.replace(/[|]+/g,” “).replace(/\s+/g,” “).trim()).filter(Boolean);}
-function extractProviderName(lines){const pw=/(hospital|medical|clinic|pharmacy|chemist|laboratory|lab|center|centre)/i,hw=/(invoice|tax invoice|date|time|age|patient|doctor|ref|address|phone|tel|notes|transcription)/i,hl=lines.slice(0,8);for(const l of hl){if(pw.test(l)&&!hw.test(l))return l;}return hl.find(l=>/[a-z]/i.test(l)&&l.length>8&&!hw.test(l))||””;}
-function extractInvoiceDate(lines,fullText){const dp=/\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{4}[./-]\d{1,2}[./-]\d{1,2}\b/g;for(const l of lines){if(!/\bdate\b/i.test(l))continue;const m=l.match(dp);if(m)return m[0];}const am=fullText.match(dp);return am?am[0]:””;}
-function inferProviderType(text){if(/(pharmacy|chemist|drug store|apothec)/i.test(text))return”pharmacy”;if(/(hospital|clinic|medical center|polyclinic)/i.test(text))return”hospital”;return”unknown”;}
-function detectDocumentTax(text){const v=String(text),rm=v.match(/(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i),dr=rm?parseFlexibleNumber(rm[1]||rm[2]):0,inc=/(tax included|vat included|incl.?\s*(?:tax|vat)|inclusive of tax)/i.test(v),exc=/(tax excluded|excluding tax|plus tax|plus vat|before tax)/i.test(v);let mode=“unknown”;if(inc&&exc)mode=“mixed”;else if(inc)mode=“included”;else if(exc)mode=“not_included”;return{mode,defaultRate:dr};}
-function isLikelyMedicationLine(line){const lower=line.toLowerCase();if(!line||line.length<5)return false;if(/(subtotal|grand total|amount due|cash|change|invoice no|bill no|reference|patient|doctor|address|phone|time|age|fax|model notes|model transcription)/i.test(lower))return false;if(/^(rx|findings?|notes?)$/i.test(lower))return false;return/[a-z]/i.test(line)&&(/\d+\s*[x*]\s*\d+/i.test(line)||(/\d/.test(line)&&(/(tab|tablet|cap|capsule|syrup|inj|injection|drop|cream|gel|ointment|vit|supplement|protein|phyto|daily care|lotion|wash|spray|powder|sachet|ampoule|oral)/i.test(lower)||line.split(” “).length>=2)));}
+function splitLines(text) { return String(text).replace(/\r/g, "\n").split("\n").map(function(l) { return l.replace(/[|]+/g, " ").replace(/\s+/g, " ").trim(); }).filter(Boolean); }
+function extractProviderName(lines) { const pw = /(hospital|medical|clinic|pharmacy|chemist|laboratory|lab|center|centre)/i, hw = /(invoice|tax invoice|date|time|age|patient|doctor|ref|address|phone|tel|notes|transcription)/i, hl = lines.slice(0, 8); for (const l of hl) { if (pw.test(l) && !hw.test(l)) return l; } return hl.find(function(l) { return /[a-z]/i.test(l) && l.length > 8 && !hw.test(l); }) || ""; }
+function extractInvoiceDate(lines, fullText) { const dp = /\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{4}[./-]\d{1,2}[./-]\d{1,2}\b/g; for (const l of lines) { if (!/\bdate\b/i.test(l)) continue; const m = l.match(dp); if (m) return m[0]; } const am = fullText.match(dp); return am ? am[0] : ""; }
+function inferProviderType(text) { if (/(pharmacy|chemist|drug store|apothec)/i.test(text)) return "pharmacy"; if (/(hospital|clinic|medical center|polyclinic)/i.test(text)) return "hospital"; return "unknown"; }
+function detectDocumentTax(text) { const v = String(text), rm = v.match(/(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i), dr = rm ? parseFlexibleNumber(rm[1] || rm[2]) : 0, inc = /(tax included|vat included|incl.?\s*(?:tax|vat)|inclusive of tax)/i.test(v), exc = /(tax excluded|excluding tax|plus tax|plus vat|before tax)/i.test(v); let mode = "unknown"; if (inc && exc) mode = "mixed"; else if (inc) mode = "included"; else if (exc) mode = "not_included"; return { mode, defaultRate: dr }; }
+function isLikelyMedicationLine(line) { const lower = line.toLowerCase(); if (!line || line.length < 5) return false; if (/(subtotal|grand total|amount due|cash|change|invoice no|bill no|reference|patient|doctor|address|phone|time|age|fax|model notes|model transcription)/i.test(lower)) return false; if (/^(rx|findings?|notes?)$/i.test(lower)) return false; return /[a-z]/i.test(line) && (/\d+\s*[x*]\s*\d+/i.test(line) || (/\d/.test(line) && (/(tab|tablet|cap|capsule|syrup|inj|injection|drop|cream|gel|ointment|vit|supplement|protein|phyto|daily care|lotion|wash|spray|powder|sachet|ampoule|oral)/i.test(lower) || line.split(" ").length >= 2))); }
 
-function parseMedicationLine(line,docTax){
-const mul=extractMultiplication(line),tokens=extractAmountTokens(line,mul);
-let amountBefore=0,amountAfter=0;
-if(mul){amountBefore=mul.total;amountAfter=mul.total;const lt=tokens.filter(t=>t.start>mul.end);if(lt.length)amountAfter=lt[lt.length-1].value;}
-else if(tokens.length>=2){amountAfter=tokens[tokens.length-1].value;amountBefore=tokens[tokens.length-2].value;if(amountBefore<amountAfter)amountBefore=amountAfter;}
-else if(tokens.length===1){amountBefore=tokens[0].value;amountAfter=tokens[0].value;}
-if(!amountBefore&&amountAfter)amountBefore=amountAfter;if(!amountAfter&&amountBefore)amountAfter=amountBefore;
-const name=extractMedicationName(line);if(!name||(!amountBefore&&!amountAfter))return null;
-const tax=parseTaxForLine(line,docTax,amountAfter);
-return createItem({name,activeIngredient:””,category:detectCategory(name),amountBefore:roundMoney(amountBefore),discount:roundMoney(Math.max(amountBefore-amountAfter,0)),amountAfter:roundMoney(amountAfter),taxIncluded:tax.included,taxRate:roundMoney(tax.rate),taxAmount:roundMoney(tax.amount),autoTax:!tax.explicitAmount,rawLine:line});
+function parseMedicationLine(line, docTax) {
+  const mul = extractMultiplication(line), tokens = extractAmountTokens(line, mul);
+  let amountBefore = 0, amountAfter = 0;
+  if (mul) { amountBefore = mul.total; amountAfter = mul.total; const lt = tokens.filter(function(t) { return t.start > mul.end; }); if (lt.length) amountAfter = lt[lt.length - 1].value; }
+  else if (tokens.length >= 2) { amountAfter = tokens[tokens.length - 1].value; amountBefore = tokens[tokens.length - 2].value; if (amountBefore < amountAfter) amountBefore = amountAfter; }
+  else if (tokens.length === 1) { amountBefore = tokens[0].value; amountAfter = tokens[0].value; }
+  if (!amountBefore && amountAfter) amountBefore = amountAfter;
+  if (!amountAfter && amountBefore) amountAfter = amountBefore;
+  const name = extractMedicationName(line);
+  if (!name || (!amountBefore && !amountAfter)) return null;
+  const tax = parseTaxForLine(line, docTax, amountAfter);
+  return createItem({ name, activeIngredient: "", category: detectCategory(name), amountBefore: roundMoney(amountBefore), discount: roundMoney(Math.max(amountBefore - amountAfter, 0)), amountAfter: roundMoney(amountAfter), taxIncluded: tax.included, taxRate: roundMoney(tax.rate), taxAmount: roundMoney(tax.amount), autoTax: !tax.explicitAmount, rawLine: line });
 }
 
-function extractMultiplication(line){const m=line.match(/(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)(?:\s*[=:-]\s*(\d+(?:[.,]\d+)?))?/i);if(!m)return null;const l=parseFlexibleNumber(m[1]),r=parseFlexibleNumber(m[2]);return{start:m.index||0,end:(m.index||0)+m[0].length,total:m[3]?parseFlexibleNumber(m[3]):roundMoney(l*r)};}
-function extractAmountTokens(line,mul){const tokens=[];for(const m of line.matchAll(/\d+(?:[.,]\d+)?/g)){const raw=m[0],start=m.index||0,end=start+raw.length,suffix=line.slice(end).trimStart().toLowerCase(),ca=line.slice(end,end+1);if(mul&&start>=mul.start&&end<=mul.end)continue;if(ca===”%”)continue;if(/^(mg|ml|mcg|g|kg|iu|tabs?|tablets?|caps?|capsules?|pcs?|pack|packs|box|boxes|bottles?|vials?|ampoules?|sachets?)/i.test(suffix))continue;tokens.push({raw,value:parseFlexibleNumber(raw),start,end});}if(tokens.length>2)return tokens.filter((t,i)=>{const ns=t.start<line.length*0.35,si=Number.isInteger(t.value)&&t.value<=10;return!(ns&&si&&i<tokens.length-2);});return tokens;}
-function extractMedicationName(line){const ign=new Set([“tax”,“vat”,“gst”,“discount”,“disc”,“less”,“save”,“net”,“amount”,“price”,“qty”,“quantity”,“subtotal”,“total”,“invoice”,“bill”]);return line.replace(/[=,:;]+/g,” “).split(/\s+/).filter(Boolean).filter(t=>{const l=t.toLowerCase();if(ign.has(l))return false;if(/^\d+(?:[.,]\d+)?$/.test(t))return false;if(/^[x*=-]+$/i.test(t))return false;if(/^[a-z]+$/i.test(t))return true;if(/^\d+(?:mg|ml|mcg|g|kg|iu)$/i.test(l))return true;return/[a-z]/i.test(t);}).join(” “).replace(/\s+/g,” “).trim();}
-function detectCategory(name){const l=String(name).toLowerCase();if(/(vit|vitamin|supplement|omega|protein|nutrition|food supplement|multivit|zinc|magnesium|calcium|iron|mineral)/i.test(l))return”vitamin”;if(/(phyto|daily care|care|cream|cleanser|lotion|wash|soap|shampoo|conditioner|toothpaste|cosmetic|hygiene)/i.test(l))return”daily”;return”medicine”;}
-function parseTaxForLine(line,docTax,amountAfter){const rm=line.match(/(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i),am=line.match(/(?:vat|gst|tax)[^\d%]{0,8}(\d+(?:[.,]\d+)?)(?!\s*%)/i);const rate=rm?parseFlexibleNumber(rm[1]||rm[2]):docTax.defaultRate,ea=am?parseFlexibleNumber(am[1]):0;let inc=false;if(/(tax included|vat included|incl.?\s*(?:tax|vat)|inclusive of tax)/i.test(line))inc=true;else if(/(tax excluded|excluding tax|plus tax|plus vat|before tax)/i.test(line))inc=false;else if(docTax.mode===“included”)inc=true;return{included:inc,rate,amount:ea||computeTaxAmount({amountAfter,taxRate:rate,taxIncluded:inc}),explicitAmount:Boolean(ea)};}
+function extractMultiplication(line) { const m = line.match(/(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)(?:\s*[=:-]\s*(\d+(?:[.,]\d+)?))?/i); if (!m) return null; const l = parseFlexibleNumber(m[1]), r = parseFlexibleNumber(m[2]); return { start: m.index || 0, end: (m.index || 0) + m[0].length, total: m[3] ? parseFlexibleNumber(m[3]) : roundMoney(l * r) }; }
+function extractAmountTokens(line, mul) { const tokens = []; for (const m of line.matchAll(/\d+(?:[.,]\d+)?/g)) { const raw = m[0], start = m.index || 0, end = start + raw.length, suffix = line.slice(end).trimStart().toLowerCase(), ca = line.slice(end, end + 1); if (mul && start >= mul.start && end <= mul.end) continue; if (ca === "%") continue; if (/^(mg|ml|mcg|g|kg|iu|tabs?|tablets?|caps?|capsules?|pcs?|pack|packs|box|boxes|bottles?|vials?|ampoules?|sachets?)/i.test(suffix)) continue; tokens.push({ raw, value: parseFlexibleNumber(raw), start, end }); } if (tokens.length > 2) return tokens.filter(function(t, i) { const ns = t.start < line.length * 0.35, si = Number.isInteger(t.value) && t.value <= 10; return !(ns && si && i < tokens.length - 2); }); return tokens; }
+function extractMedicationName(line) { const ign = new Set(["tax","vat","gst","discount","disc","less","save","net","amount","price","qty","quantity","subtotal","total","invoice","bill"]); return line.replace(/[=,:;]+/g, " ").split(/\s+/).filter(Boolean).filter(function(t) { const l = t.toLowerCase(); if (ign.has(l)) return false; if (/^\d+(?:[.,]\d+)?$/.test(t)) return false; if (/^[x*=-]+$/i.test(t)) return false; if (/^[a-z]+$/i.test(t)) return true; if (/^\d+(?:mg|ml|mcg|g|kg|iu)$/i.test(l)) return true; return /[a-z]/i.test(t); }).join(" ").replace(/\s+/g, " ").trim(); }
+function detectCategory(name) { const l = String(name).toLowerCase(); if (/(vit|vitamin|supplement|omega|protein|nutrition|food supplement|multivit|zinc|magnesium|calcium|iron|mineral)/i.test(l)) return "vitamin"; if (/(phyto|daily care|care|cream|cleanser|lotion|wash|soap|shampoo|conditioner|toothpaste|cosmetic|hygiene)/i.test(l)) return "daily"; return "medicine"; }
+function parseTaxForLine(line, docTax, amountAfter) { const rm = line.match(/(?:vat|gst|tax)[^\d]{0,12}(\d+(?:[.,]\d+)?)\s*%|(\d+(?:[.,]\d+)?)\s*%\s*(?:vat|gst|tax)/i), am = line.match(/(?:vat|gst|tax)[^\d%]{0,8}(\d+(?:[.,]\d+)?)(?!\s*%)/i); const rate = rm ? parseFlexibleNumber(rm[1] || rm[2]) : docTax.defaultRate, ea = am ? parseFlexibleNumber(am[1]) : 0; let inc = false; if (/(tax included|vat included|incl.?\s*(?:tax|vat)|inclusive of tax)/i.test(line)) inc = true; else if (/(tax excluded|excluding tax|plus tax|plus vat|before tax)/i.test(line)) inc = false; else if (docTax.mode === "included") inc = true; return { included: inc, rate, amount: ea || computeTaxAmount({ amountAfter, taxRate: rate, taxIncluded: inc }), explicitAmount: Boolean(ea) }; }
 
-function syncSummaryInputs(){refs.providerNameInput.value=state.summary.providerName;refs.invoiceDateInput.value=state.summary.invoiceDate;refs.providerTypeInput.value=state.summary.providerType;refs.taxModeInput.value=state.summary.taxMode;}
+function syncSummaryInputs() { refs.providerNameInput.value = state.summary.providerName; refs.invoiceDateInput.value = state.summary.invoiceDate; refs.providerTypeInput.value = state.summary.providerType; refs.taxModeInput.value = state.summary.taxMode; }
 
-function renderItems(){
-if(!state.items.length){refs.itemsBody.innerHTML=`<tr class="row-medicine"><td colspan="13" class="empty-cell">No medicine rows detected yet. Upload an image, run AI extraction, or add rows manually.</td></tr>`;updateStats();return;}
-refs.itemsBody.innerHTML=state.items.map(item=>` <tr class="${rowClass(item.category)}" data-id="${item.id}"> <td><input data-field="name" type="text" value="${escapeHtml(item.name)}"/></td> <td><input data-field="activeIngredient" type="text" value="${escapeHtml(item.activeIngredient)}"/></td> <td><input data-field="uses" type="text" value="${escapeHtml(item.uses)}"/></td> <td><select data-field="genericOrBrand">${renderDrugKindOptions(item.genericOrBrand)}</select></td> <td><select data-field="category">${renderCategoryOptions(item.category)}</select></td> <td><input data-field="amountBefore" type="number" min="0" step="0.01" value="${toInputNumber(item.amountBefore)}"/></td> <td><input data-field="discount" type="number" min="0" step="0.01" value="${toInputNumber(item.discount)}"/></td> <td><input data-field="amountAfter" type="number" min="0" step="0.01" value="${toInputNumber(item.amountAfter)}"/></td> <td class="checkbox-cell"><label class="checkbox-wrap"><input data-field="taxIncluded" type="checkbox" ${item.taxIncluded?"checked":""}><span>${item.taxIncluded?"Yes":"No"}</span></label></td> <td><input data-field="taxRate" type="number" min="0" step="0.01" value="${toInputNumber(item.taxRate)}"/></td> <td><input data-field="taxAmount" type="number" min="0" step="0.01" value="${toInputNumber(item.taxAmount)}"/></td> <td><input data-field="rawLine" type="text" value="${escapeHtml(item.rawLine)}"/></td> <td><button class="row-delete" data-action="delete-row" type="button">Delete</button></td> </tr>`).join(””);
+function renderItems() {
+  if (!state.items.length) { refs.itemsBody.innerHTML = '<tr class="row-medicine"><td colspan="13" class="empty-cell">No medicine rows detected yet. Upload an image, run AI extraction, or add rows manually.</td></tr>'; updateStats(); return; }
+  refs.itemsBody.innerHTML = state.items.map(function(item) {
+    return '<tr class="' + rowClass(item.category) + '" data-id="' + item.id + '">' +
+      '<td><input data-field="name" type="text" value="' + escapeHtml(item.name) + '"/></td>' +
+      '<td><input data-field="activeIngredient" type="text" value="' + escapeHtml(item.activeIngredient) + '"/></td>' +
+      '<td><input data-field="uses" type="text" value="' + escapeHtml(item.uses) + '"/></td>' +
+      '<td><select data-field="genericOrBrand">' + renderDrugKindOptions(item.genericOrBrand) + '</select></td>' +
+      '<td><select data-field="category">' + renderCategoryOptions(item.category) + '</select></td>' +
+      '<td><input data-field="amountBefore" type="number" min="0" step="0.01" value="' + toInputNumber(item.amountBefore) + '"/></td>' +
+      '<td><input data-field="discount" type="number" min="0" step="0.01" value="' + toInputNumber(item.discount) + '"/></td>' +
+      '<td><input data-field="amountAfter" type="number" min="0" step="0.01" value="' + toInputNumber(item.amountAfter) + '"/></td>' +
+      '<td class="checkbox-cell"><label class="checkbox-wrap"><input data-field="taxIncluded" type="checkbox" ' + (item.taxIncluded ? "checked" : "") + '><span>' + (item.taxIncluded ? "Yes" : "No") + '</span></label></td>' +
+      '<td><input data-field="taxRate" type="number" min="0" step="0.01" value="' + toInputNumber(item.taxRate) + '"/></td>' +
+      '<td><input data-field="taxAmount" type="number" min="0" step="0.01" value="' + toInputNumber(item.taxAmount) + '"/></td>' +
+      '<td><input data-field="rawLine" type="text" value="' + escapeHtml(item.rawLine) + '"/></td>' +
+      '<td><button class="row-delete" data-action="delete-row" type="button">Delete</button></td>' +
+      '</tr>';
+  }).join("");
 }
-function renderCategoryOptions(s){return Object.entries(CATEGORY_LABELS).map(([v,l])=>`<option value="${v}" ${v===s?"selected":""}>${l}</option>`).join(””);}
-function renderDrugKindOptions(s){return Object.entries(DRUG_KIND_LABELS).map(([v,l])=>`<option value="${v}" ${v===s?"selected":""}>${l}</option>`).join(””);}
+function renderCategoryOptions(s) { return Object.entries(CATEGORY_LABELS).map(function(e) { return '<option value="' + e[0] + '" ' + (e[0] === s ? "selected" : "") + '>' + e[1] + '</option>'; }).join(""); }
+function renderDrugKindOptions(s) { return Object.entries(DRUG_KIND_LABELS).map(function(e) { return '<option value="' + e[0] + '" ' + (e[0] === s ? "selected" : "") + '>' + e[1] + '</option>'; }).join(""); }
 
-function handleTableInput(event){
-const target=event.target,row=target.closest(“tr[data-id]”);if(!row)return;
-const item=state.items.find(e=>e.id===row.dataset.id);if(!item||!target.dataset.field)return;
-const{field}=target.dataset;
-if(field===“taxIncluded”)item.taxIncluded=target.checked;
-else if([“name”,“activeIngredient”,“uses”,“genericOrBrand”,“rawLine”,“category”].includes(field))item[field]=target.value;
-else if(field===“amountBefore”){item.amountBefore=roundMoney(parseFlexibleNumber(target.value));item.amountAfter=roundMoney(Math.max(item.amountBefore-item.discount,0));}
-else if(field===“discount”){item.discount=roundMoney(Math.max(parseFlexibleNumber(target.value),0));if(item.amountBefore<item.discount)item.amountBefore=item.discount;item.amountAfter=roundMoney(Math.max(item.amountBefore-item.discount,0));}
-else if(field===“amountAfter”){item.amountAfter=roundMoney(Math.max(parseFlexibleNumber(target.value),0));if(item.amountAfter>item.amountBefore)item.amountBefore=item.amountAfter;item.discount=roundMoney(Math.max(item.amountBefore-item.amountAfter,0));}
-else if(field===“taxAmount”){const rv=String(target.value||””).trim();item.taxAmount=roundMoney(parseFlexibleNumber(rv));item.autoTax=!rv;}
-else item[field]=roundMoney(parseFlexibleNumber(target.value));
-if([“amountBefore”,“discount”,“amountAfter”,“taxRate”,“taxIncluded”].includes(field)&&(item.autoTax||!item.taxAmount))item.taxAmount=computeTaxAmount(item);
-updateRenderedRow(row,item);updateTotals();updateStats();
+function handleTableInput(event) {
+  const target = event.target, row = target.closest("tr[data-id]"); if (!row) return;
+  const item = state.items.find(function(e) { return e.id === row.dataset.id; }); if (!item || !target.dataset.field) return;
+  const field = target.dataset.field;
+  if (field === "taxIncluded") item.taxIncluded = target.checked;
+  else if (["name","activeIngredient","uses","genericOrBrand","rawLine","category"].includes(field)) item[field] = target.value;
+  else if (field === "amountBefore") { item.amountBefore = roundMoney(parseFlexibleNumber(target.value)); item.amountAfter = roundMoney(Math.max(item.amountBefore - item.discount, 0)); }
+  else if (field === "discount") { item.discount = roundMoney(Math.max(parseFlexibleNumber(target.value), 0)); if (item.amountBefore < item.discount) item.amountBefore = item.discount; item.amountAfter = roundMoney(Math.max(item.amountBefore - item.discount, 0)); }
+  else if (field === "amountAfter") { item.amountAfter = roundMoney(Math.max(parseFlexibleNumber(target.value), 0)); if (item.amountAfter > item.amountBefore) item.amountBefore = item.amountAfter; item.discount = roundMoney(Math.max(item.amountBefore - item.amountAfter, 0)); }
+  else if (field === "taxAmount") { const rv = String(target.value || "").trim(); item.taxAmount = roundMoney(parseFlexibleNumber(rv)); item.autoTax = !rv; }
+  else item[field] = roundMoney(parseFlexibleNumber(target.value));
+  if (["amountBefore","discount","amountAfter","taxRate","taxIncluded"].includes(field) && (item.autoTax || !item.taxAmount)) item.taxAmount = computeTaxAmount(item);
+  updateRenderedRow(row, item); updateTotals(); updateStats();
 }
-function handleTableKeydown(event){if(event.key!==“Enter”)return;const t=event.target;if(!t.dataset.field)return;event.preventDefault();t.dispatchEvent(new Event(“input”,{bubbles:true}));t.blur();}
-function handleTableClick(event){const btn=event.target.closest(”[data-action=‘delete-row’]”);if(!btn)return;const row=btn.closest(“tr[data-id]”);if(!row)return;state.items=state.items.filter(i=>i.id!==row.dataset.id);renderItems();updateTotals();updateStats();}
+function handleTableKeydown(event) { if (event.key !== "Enter") return; const t = event.target; if (!t.dataset.field) return; event.preventDefault(); t.dispatchEvent(new Event("input", { bubbles: true })); t.blur(); }
+function handleTableClick(event) { const btn = event.target.closest("[data-action='delete-row']"); if (!btn) return; const row = btn.closest("tr[data-id]"); if (!row) return; state.items = state.items.filter(function(i) { return i.id !== row.dataset.id; }); renderItems(); updateTotals(); updateStats(); }
 
-function updateRenderedRow(row,item){
-row.className=rowClass(item.category);
-const g=f=>row.querySelector(`[data-field='${f}']`);
-const disc=g(“discount”),taxLbl=row.querySelector(”.checkbox-wrap span”),taxAmt=g(“taxAmount”),after=g(“amountAfter”),before=g(“amountBefore”),ai=g(“activeIngredient”),uses=g(“uses”),gob=g(“genericOrBrand”);
-if(disc&&document.activeElement!==disc)disc.value=toInputNumber(item.discount);
-if(before&&document.activeElement!==before)before.value=toInputNumber(item.amountBefore);
-if(after&&document.activeElement!==after)after.value=toInputNumber(item.amountAfter);
-if(ai&&document.activeElement!==ai)ai.value=item.activeIngredient||””;
-if(uses&&document.activeElement!==uses)uses.value=item.uses||””;
-if(gob&&document.activeElement!==gob)gob.value=item.genericOrBrand||“unknown”;
-if(taxLbl)taxLbl.textContent=item.taxIncluded?“Yes”:“No”;
-if(taxAmt&&document.activeElement!==taxAmt)taxAmt.value=toInputNumber(item.taxAmount);
-}
-
-function addManualRow(){state.items.push(createItem());renderItems();updateTotals();updateStats();setStatus(“A blank medication row was added.”,“info”);}
-
-async function fillDrugDetails(options={}){
-const unresolved=state.items.filter(i=>i.name&&(i.category===“medicine”||i.category===“vitamin”)&&(!i.activeIngredient||i.genericOrBrand===“unknown”));
-if(!unresolved.length){if(!options.silent)setStatus(“All rows already have drug details filled.”,“info”);return;}
-setButtonsDisabled(true);if(!options.silent)setStatus(“Filling drug details…”,“info”);
-try{
-const response=await fetch(”/api/enrich-drug-details”,{method:“POST”,headers:{“Content-Type”:“application/json”},body:JSON.stringify({sessionApiKey:refs.sessionApiKey.value.trim(),items:unresolved.map(i=>({name:i.name,rawLine:i.rawLine,category:i.category,activeIngredient:i.activeIngredient,genericOrBrand:i.genericOrBrand}))})});
-const payload=await response.json();if(!response.ok)throw new Error(payload.error||“Drug detail enrichment failed.”);
-const byKey=new Map((payload.items||[]).map(i=>[normalizeDrugKey(i.name),i]));
-for(const row of state.items){const e=byKey.get(normalizeDrugKey(row.name));if(!e)continue;if(!row.activeIngredient&&e.activeIngredient)row.activeIngredient=e.activeIngredient;if((!row.genericOrBrand||row.genericOrBrand===“unknown”)&&e.genericOrBrand)row.genericOrBrand=normalizeDrugKind(e.genericOrBrand);}
-renderItems();updateTotals();updateStats();if(!options.silent)setStatus(“Drug details updated.”,“success”);
-}catch(error){console.error(error);if(!options.silent)setStatus(error instanceof Error?error.message:“Drug detail enrichment failed.”,“warn”);}
-finally{setButtonsDisabled(false);}
-}
-
-function calculateTotals(){
-const t=state.items.reduce((a,i)=>{a.before+=i.amountBefore||0;a.after+=i.amountAfter||0;a.discount+=getDiscount(i);a.tax+=i.taxAmount||0;return a;},{before:0,discount:0,after:0,tax:0});
-t.before=roundMoney(t.before);t.discount=roundMoney(t.discount);t.after=roundMoney(t.after);t.tax=roundMoney(t.tax);t.final=roundMoney(t.after+t.tax);return t;
-}
-function updateTotals(){
-const t=calculateTotals();
-refs.totalBefore.textContent=formatMoney(t.before);refs.totalDiscount.textContent=formatMoney(t.discount);refs.totalAfter.textContent=formatMoney(t.after);refs.totalTax.textContent=formatMoney(t.tax);
-refs.summaryBefore.textContent=formatMoney(t.before);refs.summaryDiscount.textContent=formatMoney(t.discount);refs.summaryAfter.textContent=formatMoney(t.after);refs.summaryTax.textContent=formatMoney(t.tax);
-refs.summaryFinal.textContent=formatMoney(t.final);refs.summaryFinalFormula.textContent=`${formatMoney(t.after)} + ${formatMoney(t.tax)} tax`;
-if(refs.tableFinal)refs.tableFinal.textContent=formatMoney(t.final);
-if(refs.tableFinalFormula)refs.tableFinalFormula.textContent=`${formatMoney(t.after)} + ${formatMoney(t.tax)} tax`;
-}
-function updateStats(){refs.itemCount.textContent=String(state.items.length);refs.ocrConfidence.textContent=state.confidenceLabel||”-”;}
-
-function exportSheet(){
-if(!state.items.length){setStatus(“There are no medication rows to export yet.”,“warn”);return;}
-const t=calculateTotals();
-const rows=[[“Provider name”,state.summary.providerName],[“Invoice date”,state.summary.invoiceDate],[“Provider type”,PROVIDER_TYPE_LABELS[state.summary.providerType]||“Unknown”],[“Tax mode”,TAX_MODE_LABELS[state.summary.taxMode]||“Unknown”],[“Final amount”,formatMoney(t.final)],[],[“Medication name”,“Active ingredient”,“Uses”,“Brand / Generic”,“Category”,“Before discount”,“Discount”,“After discount”,“Tax included”,“Tax %”,“Tax amount”,“Source line”],…state.items.map(i=>[i.name,i.activeIngredient,i.uses,DRUG_KIND_LABELS[i.genericOrBrand]||“Unknown”,CATEGORY_LABELS[i.category],formatMoney(i.amountBefore),formatMoney(getDiscount(i)),formatMoney(i.amountAfter),i.taxIncluded?“Yes”:“No”,i.taxRate?String(i.taxRate):””,formatMoney(i.taxAmount),i.rawLine]),[],[“Totals”,””,””,””,””,formatMoney(t.before),formatMoney(t.discount),formatMoney(t.after),””,””,formatMoney(t.tax),””]];
-const prov=sanitizeFilename(state.summary.providerName||“invoice”),dp=sanitizeFilename(state.summary.invoiceDate||“sheet”);
-const csv=rows.map(r=>r.map(csvCell).join(”,”)).join(”\n”),blob=new Blob([csv],{type:“text/csv;charset=utf-8;”});
-const link=document.createElement(“a”);link.href=URL.createObjectURL(blob);link.download=`${prov}-${dp}.csv`;link.click();URL.revokeObjectURL(link.href);
-setStatus(“Sheet exported as CSV.”,“success”);
+function updateRenderedRow(row, item) {
+  row.className = rowClass(item.category);
+  const g = function(f) { return row.querySelector("[data-field='" + f + "']"); };
+  const disc = g("discount"), taxLbl = row.querySelector(".checkbox-wrap span"), taxAmt = g("taxAmount"), after = g("amountAfter"), before = g("amountBefore"), ai = g("activeIngredient"), uses = g("uses"), gob = g("genericOrBrand");
+  if (disc && document.activeElement !== disc) disc.value = toInputNumber(item.discount);
+  if (before && document.activeElement !== before) before.value = toInputNumber(item.amountBefore);
+  if (after && document.activeElement !== after) after.value = toInputNumber(item.amountAfter);
+  if (ai && document.activeElement !== ai) ai.value = item.activeIngredient || "";
+  if (uses && document.activeElement !== uses) uses.value = item.uses || "";
+  if (gob && document.activeElement !== gob) gob.value = item.genericOrBrand || "unknown";
+  if (taxLbl) taxLbl.textContent = item.taxIncluded ? "Yes" : "No";
+  if (taxAmt && document.activeElement !== taxAmt) taxAmt.value = toInputNumber(item.taxAmount);
 }
 
-function resetApp(){
-state.imageName=””;state.sourceImage=null;state.rotation=0;state.reviewText=””;state.confidenceLabel=”-”;state.summary=defaultSummary();state.items=[];
-refs.invoiceInput.value=””;refs.ocrText.value=””;syncSummaryInputs();renderPreview();renderItems();updateTotals();updateStats();setProgress(0);
-setStatus(“The invoice sheet has been reset.”,“info”);
+function addManualRow() { state.items.push(createItem()); renderItems(); updateTotals(); updateStats(); setStatus("A blank medication row was added.", "info"); }
+
+async function fillDrugDetails(options) {
+  options = options || {};
+  const unresolved = state.items.filter(function(i) { return i.name && (i.category === "medicine" || i.category === "vitamin") && (!i.activeIngredient || i.genericOrBrand === "unknown"); });
+  if (!unresolved.length) { if (!options.silent) setStatus("All rows already have drug details filled.", "info"); return; }
+  setButtonsDisabled(true); if (!options.silent) setStatus("Filling drug details...", "info");
+  try {
+    const response = await fetch("/api/enrich-drug-details", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionApiKey: refs.sessionApiKey.value.trim(), items: unresolved.map(function(i) { return { name: i.name, rawLine: i.rawLine, category: i.category, activeIngredient: i.activeIngredient, genericOrBrand: i.genericOrBrand }; }) })
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Drug detail enrichment failed.");
+    const byKey = new Map((payload.items || []).map(function(i) { return [normalizeDrugKey(i.name), i]; }));
+    for (const row of state.items) { const e = byKey.get(normalizeDrugKey(row.name)); if (!e) continue; if (!row.activeIngredient && e.activeIngredient) row.activeIngredient = e.activeIngredient; if ((!row.genericOrBrand || row.genericOrBrand === "unknown") && e.genericOrBrand) row.genericOrBrand = normalizeDrugKind(e.genericOrBrand); }
+    renderItems(); updateTotals(); updateStats(); if (!options.silent) setStatus("Drug details updated.", "success");
+  } catch (error) {
+    console.error(error); if (!options.silent) setStatus(error instanceof Error ? error.message : "Drug detail enrichment failed.", "warn");
+  } finally { setButtonsDisabled(false); }
 }
 
-function inferDrugUses(v){const n=normalizeDrugKey(v);const maps=[{p:/\b(insulin glargine|insulin detemir|insulin aspart|toujeo|lantus|levemir|novorapid)\b/,u:“diabetes control”},{p:/\b(empagliflozin|linagliptin|metformin|gliclazide|glimepiride|dapagliflozin|sitagliptin|jardiance|trajenta|janumet|forxiga|glucophage|diamicron)\b/,u:“type 2 diabetes”},{p:/\b(amlodipine|telmisartan|bisoprolol|rhea amlo|telma|concor)\b/,u:“high blood pressure”},{p:/\b(atorvastatin|rosuvastatin|rhea ator|crestor|lipitor)\b/,u:“high cholesterol”},{p:/\b(amoxicillin|clavulanic|augmentin|metronidazole|flagyl)\b/,u:“infection”},{p:/\b(paracetamol|panadol)\b/,u:“pain / fever”},{p:/\b(diclofenac|voltaren)\b/,u:“pain / inflammation”}];for(const m of maps){if(m.p.test(n))return m.u;}return””;}
+function calculateTotals() {
+  const t = state.items.reduce(function(a, i) { a.before += i.amountBefore || 0; a.after += i.amountAfter || 0; a.discount += getDiscount(i); a.tax += i.taxAmount || 0; return a; }, { before: 0, discount: 0, after: 0, tax: 0 });
+  t.before = roundMoney(t.before); t.discount = roundMoney(t.discount); t.after = roundMoney(t.after); t.tax = roundMoney(t.tax); t.final = roundMoney(t.after + t.tax); return t;
+}
+function updateTotals() {
+  const t = calculateTotals();
+  refs.totalBefore.textContent = formatMoney(t.before); refs.totalDiscount.textContent = formatMoney(t.discount); refs.totalAfter.textContent = formatMoney(t.after); refs.totalTax.textContent = formatMoney(t.tax);
+  refs.summaryBefore.textContent = formatMoney(t.before); refs.summaryDiscount.textContent = formatMoney(t.discount); refs.summaryAfter.textContent = formatMoney(t.after); refs.summaryTax.textContent = formatMoney(t.tax);
+  refs.summaryFinal.textContent = formatMoney(t.final); refs.summaryFinalFormula.textContent = formatMoney(t.after) + " + " + formatMoney(t.tax) + " tax";
+  if (refs.tableFinal) refs.tableFinal.textContent = formatMoney(t.final);
+  if (refs.tableFinalFormula) refs.tableFinalFormula.textContent = formatMoney(t.after) + " + " + formatMoney(t.tax) + " tax";
+}
+function updateStats() { refs.itemCount.textContent = String(state.items.length); refs.ocrConfidence.textContent = state.confidenceLabel || "-"; }
 
-function lookupDrugInfo(name,rawLine=””){
-const n=normalizeDrugKey(`${name} ${rawLine}`);
-const maps=[{p:/\btouj/,ai:“insulin glargine”,gob:“brand”,u:“diabetes control”},{p:/\bjardi/,ai:“empagliflozin”,gob:“brand”,u:“type 2 diabetes”},{p:/\btrajen/,ai:“linagliptin”,gob:“brand”,u:“type 2 diabetes”},{p:/\bjanumet/,ai:“sitagliptin + metformin”,gob:“brand”,u:“type 2 diabetes”},{p:/\bforxiga/,ai:“dapagliflozin”,gob:“brand”,u:“type 2 diabetes”},{p:/\bglucophage/,ai:“metformin”,gob:“brand”,u:“type 2 diabetes”},{p:/\bdiamicron/,ai:“gliclazide”,gob:“brand”,u:“type 2 diabetes”},{p:/\bcrestor/,ai:“rosuvastatin”,gob:“brand”,u:“high cholesterol”},{p:/\blipitor/,ai:“atorvastatin”,gob:“brand”,u:“high cholesterol”},{p:/\btelma/,ai:“telmisartan”,gob:“brand”,u:“high blood pressure”},{p:/\bconcor/,ai:“bisoprolol”,gob:“brand”,u:“high blood pressure”},{p:/\baugmentin/,ai:“amoxicillin + clavulanic acid”,gob:“brand”,u:“infection”},{p:/\bpanadol/,ai:“paracetamol”,gob:“brand”,u:“pain / fever”},{p:/\bvoltaren/,ai:“diclofenac”,gob:“brand”,u:“pain / inflammation”},{p:/\bflagyl/,ai:“metronidazole”,gob:“brand”,u:“infection”},{p:/\blantus/,ai:“insulin glargine”,gob:“brand”,u:“diabetes control”},{p:/\blevemir/,ai:“insulin detemir”,gob:“brand”,u:“diabetes control”},{p:/\bnovorapid/,ai:“insulin aspart”,gob:“brand”,u:“diabetes control”},{p:/\bmetformin/,ai:“metformin”,gob:“generic”,u:“type 2 diabetes”},{p:/\batorvastatin/,ai:“atorvastatin”,gob:“generic”,u:“high cholesterol”},{p:/\bamlodipine/,ai:“amlodipine”,gob:“generic”,u:“high blood pressure”}];
-for(const m of maps){if(m.p.test(n))return{activeIngredient:m.ai,uses:m.u,genericOrBrand:m.gob};}
-return{activeIngredient:””,uses:inferDrugUses(n),genericOrBrand:“unknown”};
+function exportSheet() {
+  if (!state.items.length) { setStatus("There are no medication rows to export yet.", "warn"); return; }
+  const t = calculateTotals();
+  const rows = [
+    ["Provider name", state.summary.providerName],
+    ["Invoice date", state.summary.invoiceDate],
+    ["Provider type", PROVIDER_TYPE_LABELS[state.summary.providerType] || "Unknown"],
+    ["Tax mode", TAX_MODE_LABELS[state.summary.taxMode] || "Unknown"],
+    ["Final amount", formatMoney(t.final)],
+    [],
+    ["Medication name","Active ingredient","Uses","Brand / Generic","Category","Before discount","Discount","After discount","Tax included","Tax %","Tax amount","Source line"]
+  ].concat(
+    state.items.map(function(i) { return [i.name, i.activeIngredient, i.uses, DRUG_KIND_LABELS[i.genericOrBrand] || "Unknown", CATEGORY_LABELS[i.category], formatMoney(i.amountBefore), formatMoney(getDiscount(i)), formatMoney(i.amountAfter), i.taxIncluded ? "Yes" : "No", i.taxRate ? String(i.taxRate) : "", formatMoney(i.taxAmount), i.rawLine]; })
+  ).concat([
+    [],
+    ["Totals","","","","", formatMoney(t.before), formatMoney(t.discount), formatMoney(t.after),"","", formatMoney(t.tax),""]
+  ]);
+  const prov = sanitizeFilename(state.summary.providerName || "invoice"), dp = sanitizeFilename(state.summary.invoiceDate || "sheet");
+  const csv = rows.map(function(r) { return r.map(csvCell).join(","); }).join("\n"), blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = prov + "-" + dp + ".csv"; link.click(); URL.revokeObjectURL(link.href);
+  setStatus("Sheet exported as CSV.", "success");
 }
 
-function normalizeDrugKey(v){return String(v||””).toLowerCase().replace(/[^a-z0-9]+/g,” “).replace(/\s+/g,” “).trim();}
-function toNumber(v){return typeof v===“number”?(Number.isFinite(v)?v:0):parseFlexibleNumber(v);}
-function computeTaxAmount(item){const rate=parseFlexibleNumber(item.taxRate),amt=parseFlexibleNumber(item.amountAfter);if(!rate||!amt)return 0;return item.taxIncluded?roundMoney(amt-amt/(1+rate/100)):roundMoney(amt*(rate/100));}
-function getDiscount(item){const e=parseFlexibleNumber(item.discount);if(e)return roundMoney(Math.max(e,0));return roundMoney(Math.max((item.amountBefore||0)-(item.amountAfter||0),0));}
-function rowClass(cat){if(cat===“vitamin”)return”row-vitamin”;if(cat===“daily”)return”row-daily”;return”row-medicine”;}
-function setStatus(msg,tone){refs.statusText.textContent=msg;refs.statusText.className=`status tone-${tone}`;}
-function setProgress(v){refs.progressFill.style.width=`${Math.max(0,Math.min(100,v))}%`;}
-function setButtonsDisabled(d){[“runOcrBtn”,“parseTextBtn”,“rotateLeftBtn”,“rotateRightBtn”,“exportBtn”,“addRowBtn”,“fillDrugDetailsBtn”].forEach(id=>{if(refs[id])refs[id].disabled=d;});}
-function parseFlexibleNumber(v){const c=String(v||””).trim().replace(/[^\d,.-]/g,””);if(!c)return 0;const hc=c.includes(”,”),hd=c.includes(”.”);if(hc&&hd){return c.lastIndexOf(”.”)>c.lastIndexOf(”,”)?Number.parseFloat(c.replace(/,/g,””))||0:Number.parseFloat(c.replace(/./g,””).replace(”,”,”.”))||0;}if(hc&&c.split(”,”).pop().length<=2)return Number.parseFloat(c.replace(”,”,”.”))||0;return Number.parseFloat(c.replace(/,/g,””))||0;}
-function roundMoney(v){return Math.round((Number(v)+Number.EPSILON)*100)/100;}
-function formatMoney(v){return roundMoney(v).toFixed(2);}
-function toInputNumber(v){if(!v)return””;return String(roundMoney(v));}
-function csvCell(v){const t=String(v??””);return`"${t.replace(/"/g,'""')}`+`"`;}
-function sanitizeFilename(v){return String(v).trim().replace(/[^\w-]+/g,”-”).replace(/-+/g,”-”).replace(/^-|-$/g,””).toLowerCase();}
-function escapeHtml(v){return String(v??””).replace(/&/g,”&”).replace(/</g,”<”).replace(/>/g,”>”).replace(/”/g,”"”).replace(/’/g,”'”);}
-function normalizeProviderType(v){return(v===“pharmacy”||v===“hospital”)?v:“unknown”;}
-function normalizeTaxMode(v){return(v===“included”||v===“not_included”||v===“mixed”)?v:“unknown”;}
-function normalizeCategory(v,n=””){return(v===“medicine”||v===“vitamin”||v===“daily”)?v:detectCategory(n||””);}
-function normalizeDrugKind(v){return(v===“brand”||v===“generic”)?v:“unknown”;}
-function asText(v){return String(v??””).trim();}
+function resetApp() {
+  state.imageName = ""; state.sourceImage = null; state.rotation = 0; state.reviewText = ""; state.confidenceLabel = "-"; state.summary = defaultSummary(); state.items = [];
+  refs.invoiceInput.value = ""; refs.ocrText.value = ""; syncSummaryInputs(); renderPreview(); renderItems(); updateTotals(); updateStats(); setProgress(0);
+  setStatus("The invoice sheet has been reset.", "info");
+}
+
+function inferDrugUses(v) {
+  const n = normalizeDrugKey(v);
+  const maps = [
+    { p: /\b(insulin glargine|insulin detemir|insulin aspart|toujeo|lantus|levemir|novorapid)\b/, u: "diabetes control" },
+    { p: /\b(empagliflozin|linagliptin|metformin|gliclazide|glimepiride|dapagliflozin|sitagliptin|jardiance|trajenta|janumet|forxiga|glucophage|diamicron)\b/, u: "type 2 diabetes" },
+    { p: /\b(amlodipine|telmisartan|bisoprolol|rhea amlo|telma|concor)\b/, u: "high blood pressure" },
+    { p: /\b(atorvastatin|rosuvastatin|rhea ator|crestor|lipitor)\b/, u: "high cholesterol" },
+    { p: /\b(amoxicillin|clavulanic|augmentin|metronidazole|flagyl)\b/, u: "infection" },
+    { p: /\b(paracetamol|panadol)\b/, u: "pain / fever" },
+    { p: /\b(diclofenac|voltaren)\b/, u: "pain / inflammation" }
+  ];
+  for (const m of maps) { if (m.p.test(n)) return m.u; }
+  return "";
+}
+
+function lookupDrugInfo(name, rawLine) {
+  rawLine = rawLine || "";
+  const n = normalizeDrugKey(name + " " + rawLine);
+  const maps = [
+    { p: /\btouj/, ai: "insulin glargine", gob: "brand", u: "diabetes control" },
+    { p: /\bjardi/, ai: "empagliflozin", gob: "brand", u: "type 2 diabetes" },
+    { p: /\btrajen/, ai: "linagliptin", gob: "brand", u: "type 2 diabetes" },
+    { p: /\bjanumet/, ai: "sitagliptin + metformin", gob: "brand", u: "type 2 diabetes" },
+    { p: /\bforxiga/, ai: "dapagliflozin", gob: "brand", u: "type 2 diabetes" },
+    { p: /\bglucophage/, ai: "metformin", gob: "brand", u: "type 2 diabetes" },
+    { p: /\bdiamicron/, ai: "gliclazide", gob: "brand", u: "type 2 diabetes" },
+    { p: /\bcrestor/, ai: "rosuvastatin", gob: "brand", u: "high cholesterol" },
+    { p: /\blipitor/, ai: "atorvastatin", gob: "brand", u: "high cholesterol" },
+    { p: /\btelma/, ai: "telmisartan", gob: "brand", u: "high blood pressure" },
+    { p: /\bconcor/, ai: "bisoprolol", gob: "brand", u: "high blood pressure" },
+    { p: /\baugmentin/, ai: "amoxicillin + clavulanic acid", gob: "brand", u: "infection" },
+    { p: /\bpanadol/, ai: "paracetamol", gob: "brand", u: "pain / fever" },
+    { p: /\bvoltaren/, ai: "diclofenac", gob: "brand", u: "pain / inflammation" },
+    { p: /\bflagyl/, ai: "metronidazole", gob: "brand", u: "infection" },
+    { p: /\blantus/, ai: "insulin glargine", gob: "brand", u: "diabetes control" },
+    { p: /\blevemir/, ai: "insulin detemir", gob: "brand", u: "diabetes control" },
+    { p: /\bnovorapid/, ai: "insulin aspart", gob: "brand", u: "diabetes control" },
+    { p: /\bmetformin/, ai: "metformin", gob: "generic", u: "type 2 diabetes" },
+    { p: /\batorvastatin/, ai: "atorvastatin", gob: "generic", u: "high cholesterol" },
+    { p: /\bamlodipine/, ai: "amlodipine", gob: "generic", u: "high blood pressure" }
+  ];
+  for (const m of maps) { if (m.p.test(n)) return { activeIngredient: m.ai, uses: m.u, genericOrBrand: m.gob }; }
+  return { activeIngredient: "", uses: inferDrugUses(n), genericOrBrand: "unknown" };
+}
+
+function normalizeDrugKey(v) { return String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim(); }
+function toNumber(v) { return typeof v === "number" ? (Number.isFinite(v) ? v : 0) : parseFlexibleNumber(v); }
+function computeTaxAmount(item) { const rate = parseFlexibleNumber(item.taxRate), amt = parseFlexibleNumber(item.amountAfter); if (!rate || !amt) return 0; return item.taxIncluded ? roundMoney(amt - amt / (1 + rate / 100)) : roundMoney(amt * (rate / 100)); }
+function getDiscount(item) { const e = parseFlexibleNumber(item.discount); if (e) return roundMoney(Math.max(e, 0)); return roundMoney(Math.max((item.amountBefore || 0) - (item.amountAfter || 0), 0)); }
+function rowClass(cat) { if (cat === "vitamin") return "row-vitamin"; if (cat === "daily") return "row-daily"; return "row-medicine"; }
+function setStatus(msg, tone) { refs.statusText.textContent = msg; refs.statusText.className = "status tone-" + tone; }
+function setProgress(v) { refs.progressFill.style.width = Math.max(0, Math.min(100, v)) + "%"; }
+function setButtonsDisabled(d) { ["runOcrBtn","parseTextBtn","rotateLeftBtn","rotateRightBtn","exportBtn","addRowBtn","fillDrugDetailsBtn"].forEach(function(id) { if (refs[id]) refs[id].disabled = d; }); }
+function parseFlexibleNumber(v) { const c = String(v || "").trim().replace(/[^\d,.-]/g, ""); if (!c) return 0; const hc = c.includes(","), hd = c.includes("."); if (hc && hd) { return c.lastIndexOf(".") > c.lastIndexOf(",") ? Number.parseFloat(c.replace(/,/g, "")) || 0 : Number.parseFloat(c.replace(/\./g, "").replace(",", ".")) || 0; } if (hc && c.split(",").pop().length <= 2) return Number.parseFloat(c.replace(",", ".")) || 0; return Number.parseFloat(c.replace(/,/g, "")) || 0; }
+function roundMoney(v) { return Math.round((Number(v) + Number.EPSILON) * 100) / 100; }
+function formatMoney(v) { return roundMoney(v).toFixed(2); }
+function toInputNumber(v) { if (!v) return ""; return String(roundMoney(v)); }
+function csvCell(v) { const t = String(v != null ? v : ""); return '"' + t.replace(/"/g, '""') + '"'; }
+function sanitizeFilename(v) { return String(v).trim().replace(/[^\w-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/, "").toLowerCase(); }
+function escapeHtml(v) { return String(v != null ? v : "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+function normalizeProviderType(v) { return (v === "pharmacy" || v === "hospital") ? v : "unknown"; }
+function normalizeTaxMode(v) { return (v === "included" || v === "not_included" || v === "mixed") ? v : "unknown"; }
+function normalizeCategory(v, n) { n = n || ""; return (v === "medicine" || v === "vitamin" || v === "daily") ? v : detectCategory(n || ""); }
+function normalizeDrugKind(v) { return (v === "brand" || v === "generic") ? v : "unknown"; }
+function asText(v) { return String(v != null ? v : "").trim(); }
 </script>
-
 </body>
 </html>
