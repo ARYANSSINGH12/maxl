@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     }
 
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,14 +87,12 @@ IMPORTANT: Return ONLY the JSON object. No markdown. No backticks. No explanatio
       return res.status(500).json({ error: "Gemini returned an empty response." });
     }
 
-    // Try multiple strategies to extract valid JSON
     const extraction = extractJson(text);
 
     if (extraction) {
       return res.json({ extraction });
     }
 
-    // If all parsing fails, return the raw text so the frontend can show it
     return res.status(500).json({
       error: "Could not parse Gemini response as JSON.",
       raw: text
